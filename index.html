@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>जनगणना 2027 - क्षेत्र संग्रह ऐप</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // =============================================
+  // 🔧 APNA FIREBASE CONFIG YAHAN DAALO
+  // =============================================
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  try {
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window._fbDB = db;
+    window._fbSetDoc = setDoc;
+    window._fbDoc = doc;
+    window._fbCollection = collection;
+    window._fbGetDocs = getDocs;
+    window._fbDeleteDoc = deleteDoc;
+    window._fbOnSnapshot = onSnapshot;
+    window._fbReady = true;
+    console.log("✅ Firebase connected");
+  } catch(e) {
+    window._fbReady = false;
+    console.warn("⚠️ Firebase not configured, using localStorage only:", e.message);
+  }
+</script>
+
+<style>
+:root {
+  --saffron: #FF6B00;
+  --saffron-light: #FF8C38;
+  --navy: #0A2540;
+  --navy-mid: #163860;
+  --gold: #D4A017;
+  --gold-light: #F0C040;
+  --white: #FFFFFF;
+  --off-white: #F8F7F2;
+  --gray-100: #F0EEE8;
+  --gray-200: #E0DDD4;
+  --gray-400: #9B9588;
+  --gray-600: #5A5650;
+  --green: #1B7A3E;
+  --green-light: #27AE60;
+  --red: #C0392B;
+  --blue: #2980B9;
+  --shadow-sm: 0 2px 8px rgba(10,37,64,0.10);
+  --shadow-md: 0 4px 20px rgba(10,37,64,0.15);
+  --shadow-lg: 0 8px 40px rgba(10,37,64,0.20);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  background: var(--off-white);
+  color: var(--navy);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+  color: white;
+  padding: 0 16px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: var(--shadow-md);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-logo {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--saffron), var(--gold));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; color: white;
+  box-shadow: 0 2px 8px rgba(255,107,0,0.4);
+}
+.topbar-title { line-height: 1.2; }
+.topbar-title h1 { font-size: 15px; font-weight: 700; font-family: 'Noto Serif Devanagari', serif; }
+.topbar-title p { font-size: 11px; opacity: 0.7; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.fb-status {
+  font-size: 10px; padding: 3px 8px;
+  border-radius: 20px; font-weight: 600;
+  background: rgba(255,255,255,0.15);
+}
+.fb-status.ok { background: rgba(39,174,96,0.3); color: #7DFFB0; }
+.fb-status.err { background: rgba(192,57,43,0.3); color: #FFB3AD; }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  background: var(--navy);
+  display: flex; overflow-x: auto; gap: 0;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+  position: sticky; top: 64px; z-index: 999;
+  scrollbar-width: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  color: rgba(255,255,255,0.6);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none; background: none;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.nav-tab.active { color: var(--gold-light); border-bottom-color: var(--saffron); }
+.nav-tab:hover:not(.active) { color: white; background: rgba(255,255,255,0.05); }
+.nav-tab .badge {
+  background: var(--saffron); color: white;
+  font-size: 10px; padding: 1px 6px; border-radius: 10px; min-width: 18px;
+  text-align: center;
+}
+
+/* ── MAIN CONTENT ── */
+.main { padding: 16px; max-width: 900px; margin: 0 auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(to right, var(--gray-100), white);
+}
+.card-header h3 {
+  font-family: 'Noto Serif Devanagari', serif;
+  font-size: 15px; font-weight: 700; color: var(--navy);
+  display: flex; align-items: center; gap: 8px;
+}
+.card-header h3 span.icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--saffron), var(--gold));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: white;
+}
+.card-body { padding: 16px 18px; }
+
+/* ── FORM FIELDS ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+.form-grid.full { grid-template-columns: 1fr; }
+
+.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-group label {
+  font-size: 11.5px; font-weight: 600; color: var(--gray-600);
+  display: flex; align-items: center; gap: 4px;
+}
+.field-group label .qno {
+  background: var(--navy); color: white;
+  font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 700;
+}
+.field-group input,
+.field-group select,
+.field-group textarea {
+  padding: 8px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 13px;
+  color: var(--navy);
+  background: var(--off-white);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+  outline: none;
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+  background: white;
+}
+.field-group textarea { resize: vertical; min-height: 60px; }
+
+/* Radio/Checkbox group */
+.radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio-option {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 20px;
+  cursor: pointer; font-size: 12px;
+  transition: all 0.15s;
+  background: var(--off-white);
+}
+.radio-option input { display: none; }
+.radio-option.selected {
+  border-color: var(--saffron);
+  background: rgba(255,107,0,0.08);
+  color: var(--saffron);
+  font-weight: 600;
+}
+
+/* ── SECTION DIVIDER ── */
+.section-divider {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0 8px;
+}
+.section-divider-line { flex: 1; height: 1px; background: var(--gray-200); }
+.section-divider-label {
+  font-size: 11px; font-weight: 700; color: var(--navy-mid);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  background: linear-gradient(135deg, var(--navy), var(--saffron));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  border: none; cursor: pointer;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 13px; font-weight: 700;
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  color: white;
+  box-shadow: 0 3px 12px rgba(255,107,0,0.35);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(255,107,0,0.45); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary {
+  background: var(--navy);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+.btn-secondary:hover { background: var(--navy-mid); }
+.btn-success {
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: white;
+  box-shadow: 0 3px 12px rgba(27,122,62,0.3);
+}
+.btn-danger { background: var(--red); color: white; }
+.btn-outline {
+  background: white;
+  border: 2px solid var(--navy);
+  color: var(--navy);
+}
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.btn-icon { width: 36px; height: 36px; padding: 0; justify-content: center; border-radius: 8px; font-size: 16px; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* ── HOUSE LIST ── */
+.house-list { display: flex; flex-direction: column; gap: 10px; }
+.house-card {
+  background: white;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.house-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--gray-200);
+  transition: background 0.2s;
+}
+.house-card.complete::before { background: var(--green); }
+.house-card.partial::before { background: var(--gold); }
+.house-card.empty::before { background: var(--gray-400); }
+.house-card:hover { border-color: var(--saffron); box-shadow: var(--shadow-sm); transform: translateX(2px); }
+.house-card-info h4 { font-size: 14px; font-weight: 700; color: var(--navy); }
+.house-card-info p { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+.house-card-right { display: flex; align-items: center; gap: 8px; }
+.progress-pill {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 12px;
+}
+.progress-pill.done { background: #D4EDDA; color: var(--green); }
+.progress-pill.part { background: #FFF3CD; color: #856404; }
+.progress-pill.pend { background: var(--gray-100); color: var(--gray-400); }
+
+/* ── DASHBOARD STATS ── */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+@media (min-width: 600px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--gray-200);
+}
+.stat-card .stat-num {
+  font-family: 'Noto Serif Devanagari', serif;
+  font-size: 28px; font-weight: 700; color: var(--navy);
+  line-height: 1;
+}
+.stat-card .stat-label { font-size: 11px; color: var(--gray-400); margin-top: 4px; font-weight: 600; }
+.stat-card.orange .stat-num { color: var(--saffron); }
+.stat-card.green .stat-num { color: var(--green); }
+.stat-card.gold .stat-num { color: var(--gold); }
+
+/* ── ANALYSIS TABLE ── */
+.data-table-wrap { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.data-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px; min-width: 600px;
+}
+.data-table th {
+  background: var(--navy);
+  color: white;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+  position: sticky; top: 0;
+}
+.data-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--gray-200);
+  color: var(--navy);
+  vertical-align: middle;
+}
+.data-table tr:nth-child(even) td { background: var(--gray-100); }
+.data-table tr:hover td { background: rgba(255,107,0,0.04); }
+
+/* ── TOAST ── */
+.toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--navy);
+  color: white;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600;
+  box-shadow: var(--shadow-md);
+  animation: slideIn 0.3s ease;
+  display: flex; align-items: center; gap: 8px;
+  max-width: 280px;
+}
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+.toast.warning { background: #E67E22; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(10,37,64,0.65);
+  z-index: 5000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  display: none;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: white;
+  border-radius: var(--radius);
+  width: 100%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.25s ease;
+}
+@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(to right, var(--navy), var(--navy-mid));
+  color: white;
+}
+.modal-header h3 { font-family: 'Noto Serif Devanagari', serif; font-size: 16px; font-weight: 700; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ── CONFIG PANEL ── */
+.config-field-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  background: var(--off-white);
+}
+.config-field-item.active { border-color: var(--saffron); background: rgba(255,107,0,0.04); }
+
+/* Toggle switch */
+.toggle {
+  position: relative; display: inline-block;
+  width: 40px; height: 22px;
+}
+.toggle input { display: none; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--gray-200); border-radius: 11px;
+  cursor: pointer; transition: 0.2s;
+}
+.toggle-slider:before {
+  content: ''; position: absolute;
+  width: 18px; height: 18px;
+  left: 2px; top: 2px;
+  background: white; border-radius: 50%;
+  transition: 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle input:checked + .toggle-slider { background: var(--saffron); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 12px 0; margin-bottom: 4px;
+}
+.filter-chip {
+  padding: 5px 12px; border-radius: 16px;
+  border: 1.5px solid var(--gray-200);
+  font-size: 11.5px; font-weight: 600;
+  cursor: pointer; background: white; color: var(--gray-600);
+  transition: all 0.15s;
+}
+.filter-chip.active { border-color: var(--saffron); background: rgba(255,107,0,0.1); color: var(--saffron); }
+
+/* ── PROGRESS BAR ── */
+.progress-bar-wrap { background: var(--gray-200); border-radius: 4px; height: 6px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(to right, var(--saffron), var(--gold)); transition: width 0.5s; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center; padding: 48px 24px;
+  color: var(--gray-400);
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; font-weight: 600; color: var(--gray-600); }
+.empty-state small { font-size: 12px; }
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  position: relative; margin-bottom: 12px;
+}
+.search-bar input {
+  width: 100%; padding: 10px 14px 10px 40px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 13px; background: white;
+}
+.search-bar input:focus { outline: none; border-color: var(--saffron); }
+.search-bar::before {
+  content: '🔍'; position: absolute;
+  left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 14px;
+}
+
+/* Utility */
+.text-center { text-align: center; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.flex { display: flex; }
+.gap-8 { gap: 8px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+.tag-orange { background: rgba(255,107,0,0.15); color: var(--saffron); }
+.tag-green { background: rgba(27,122,62,0.15); color: var(--green); }
+.tag-navy { background: rgba(10,37,64,0.1); color: var(--navy); }
+
+/* Print styles */
+@media print {
+  .topbar, .nav-tabs, .btn, .no-print { display: none !important; }
+  .card { box-shadow: none; border: 1px solid #ccc; }
+  body { background: white; }
+  .page { display: block !important; }
+  .main { padding: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">ज</div>
+    <div class="topbar-title">
+      <h1>जनगणना 2027</h1>
+      <p>बिहार राजस्व एवं भूमि सुधार विभाग</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="fb-status" id="fbStatusBadge">⏳ लोड हो रहा है</div>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showPage('dashboard')" id="tab-dashboard">🏠 डैशबोर्ड</button>
+  <button class="nav-tab" onclick="showPage('houses')" id="tab-houses">🏘️ घर सूची <span class="badge" id="houseCountBadge">0</span></button>
+  <button class="nav-tab" onclick="showPage('entry')" id="tab-entry">➕ नई प्रविष्टि</button>
+  <button class="nav-tab" onclick="showPage('analysis')" id="tab-analysis">📊 विश्लेषण</button>
+  <button class="nav-tab" onclick="showPage('export')" id="tab-export">📥 निर्यात</button>
+  <button class="nav-tab" onclick="showPage('settings')" id="tab-settings">⚙️ सेटिंग्स</button>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: DASHBOARD
+  ═══════════════════════════════════════════════ -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">कुल घर</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-num" id="statComplete">0</div>
+        <div class="stat-label">पूर्ण</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-num" id="statPartial">0</div>
+        <div class="stat-label">आंशिक</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-num" id="statPending">0</div>
+        <div class="stat-label">शेष</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">📈</span> प्रगति</h3>
+        <span id="dashProgressPct" class="tag tag-orange">0%</span>
+      </div>
+      <div class="card-body">
+        <div class="progress-bar-wrap" style="height:10px; border-radius:5px;">
+          <div class="progress-bar-fill" id="dashProgressBar" style="width:0%"></div>
+        </div>
+        <div class="flex-between mt-8">
+          <span style="font-size:11px;color:var(--gray-400)">0 घर पूर्ण</span>
+          <span style="font-size:11px;color:var(--gray-400)" id="dashTotalLabel">कुल 0 घर</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">🏘️</span> हाल की प्रविष्टियाँ</h3>
+        <button class="btn btn-primary btn-sm" onclick="showPage('entry')">+ नई प्रविष्टि</button>
+      </div>
+      <div class="card-body" id="recentEntries">
+        <div class="empty-state">
+          <div class="empty-icon">🏠</div>
+          <p>अभी कोई प्रविष्टि नहीं है</p>
+          <small>नई प्रविष्टि बटन से शुरू करें</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ward Info -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">📋</span> वार्ड जानकारी</h3>
+        <button class="btn btn-outline btn-sm" onclick="openWardModal()">✏️ संपादित करें</button>
+      </div>
+      <div class="card-body" id="wardInfoDisplay">
+        <p style="color:var(--gray-400);font-size:13px">वार्ड जानकारी सेट नहीं है। सेटिंग्स में जाएं।</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: HOUSES LIST
+  ═══════════════════════════════════════════════ -->
+  <div class="page" id="page-houses">
+    <div class="flex-between" style="margin-bottom:12px">
+      <h2 style="font-family:'Noto Serif Devanagari',serif;font-size:18px;color:var(--navy)">घर सूची</h2>
+      <button class="btn btn-primary btn-sm" onclick="showPage('entry')">+ नया घर</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="houseSearch" placeholder="मकान संख्या या नाम से खोजें..." oninput="renderHouseList()">
+    </div>
+    <div class="filter-bar">
+      <div class="filter-chip active" data-filter="all" onclick="setFilter('all',this)">सभी</div>
+      <div class="filter-chip" data-filter="complete" onclick="setFilter('complete',this)">✅ पूर्ण</div>
+      <div class="filter-chip" data-filter="partial" onclick="setFilter('partial',this)">🟡 आंशिक</div>
+      <div class="filter-chip" data-filter="empty" onclick="setFilter('empty',this)">⬜ खाली</div>
+    </div>
+    <div class="house-list" id="houseListContainer">
+      <div class="empty-state">
+        <div class="empty-icon">🏘️</div>
+        <p>कोई घर नहीं मिला</p>
+        <small>नई प्रविष्टि जोड़ें</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: ENTRY FORM
+  ═══════════════════════════════════════════════ -->
+  <div class="page" id="page-entry">
+    <div class="flex-between" style="margin-bottom:12px">
+      <h2 style="font-family:'Noto Serif Devanagari',serif;font-size:18px;color:var(--navy)" id="entryPageTitle">नई प्रविष्टि</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="clearForm()">🗑️ साफ करें</button>
+        <button class="btn btn-success btn-sm" onclick="saveEntry()">💾 सहेजें</button>
+      </div>
+    </div>
+
+    <!-- House Number & Basic ID -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">🏷️</span> पहचान विवरण</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label><span class="qno">Q1</span> मकान संख्या *</label>
+            <input type="text" id="f_house_no" placeholder="जैसे: 001, 002" required>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q2</span> जनगणना मकान संख्या</label>
+            <input type="text" id="f_census_no" placeholder="जनगणना नं.">
+          </div>
+          <div class="field-group">
+            <label>वार्ड/मोहल्ला</label>
+            <input type="text" id="f_ward" placeholder="वार्ड/मोहल्ला">
+          </div>
+          <div class="field-group">
+            <label>प्रगणक नोट</label>
+            <input type="text" id="f_note" placeholder="कोई विशेष नोट">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section A: Ghar ke Sambandh Mein -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">🏠</span> घर के संबंध में प्रश्न (Q1-Q7)</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label><span class="qno">Q3</span> घर किस फर्श का है?</label>
+            <select id="f_floor_type">
+              <option value="">-- चुनें --</option>
+              <option>मिट्टी</option>
+              <option>ईंट/पत्थर</option>
+              <option>सीमेंट/कंक्रीट</option>
+              <option>टाइल्स/मोजाइक</option>
+              <option>लकड़ी</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q4</span> घर के दीवाल की सामग्री</label>
+            <select id="f_wall_material">
+              <option value="">-- चुनें --</option>
+              <option>घास/बांस/लकड़ी/मड</option>
+              <option>कच्ची ईंट/पत्थर</option>
+              <option>पक्की ईंट</option>
+              <option>सीमेंट/कंक्रीट</option>
+              <option>धातु/एस्बेस्टस</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q5</span> घर के छत की सामग्री</label>
+            <select id="f_roof_material">
+              <option value="">-- चुनें --</option>
+              <option>घास/बांस/लकड़ी</option>
+              <option>टाइल्स</option>
+              <option>स्लेट/पत्थर</option>
+              <option>जस्ता/एस्बेस्टस</option>
+              <option>आरसीसी</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q6</span> घर का उपयोग</label>
+            <select id="f_house_use">
+              <option value="">-- चुनें --</option>
+              <option>केवल आवासीय</option>
+              <option>आवासीय + व्यावसायिक</option>
+              <option>केवल व्यावसायिक</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q7</span> घर की स्थिति</label>
+            <select id="f_house_condition">
+              <option value="">-- चुनें --</option>
+              <option>जीर्णशीर्ण</option>
+              <option>पुरानी लेकिन उपयोगी</option>
+              <option>संतोषजनक</option>
+              <option>अच्छी</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section B: Parivar -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">👨‍👩‍👧‍👦</span> परिवार के संबंध में प्रश्न (Q8-Q15)</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label><span class="qno">Q8</span> परिवार की संख्या</label>
+            <input type="number" id="f_family_count" placeholder="0" min="0">
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q9</span> घर में कितने जन रहते हैं?</label>
+            <input type="number" id="f_members_count" placeholder="0" min="0">
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q10</span> परिवार के मुखिया का नाम</label>
+            <input type="text" id="f_head_name" placeholder="मुखिया का नाम">
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q11</span> परिवार के मुखिया का लिंग</label>
+            <select id="f_head_gender">
+              <option value="">-- चुनें --</option>
+              <option>पुरुष</option>
+              <option>महिला</option>
+              <option>तृतीय लिंग</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q12</span> मुखिया की जाति</label>
+            <select id="f_head_caste">
+              <option value="">-- चुनें --</option>
+              <option>अनुसूचित जाति (SC)</option>
+              <option>अनुसूचित जनजाति (ST)</option>
+              <option>अन्य पिछड़ा वर्ग (OBC)</option>
+              <option>सामान्य/अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q13</span> घर स्वयं के नाम/किराया पर</label>
+            <select id="f_ownership">
+              <option value="">-- चुनें --</option>
+              <option>स्वयं का</option>
+              <option>किराए पर</option>
+              <option>निःशुल्क</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q14</span> घर में कितने कमरे हैं?</label>
+            <input type="number" id="f_rooms" placeholder="0" min="0">
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q15</span> घर में कितने विवाहित परिवार रहते हैं?</label>
+            <input type="number" id="f_married_families" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section C: Jal, Swachhata -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">💧</span> जल, स्वच्छता एवं ऊर्जा संबंधी विवरण (Q16-Q25)</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label><span class="qno">Q16</span> पेय जल का स्रोत</label>
+            <select id="f_water_source">
+              <option value="">-- चुनें --</option>
+              <option>नल का पानी (घर में)</option>
+              <option>नल का पानी (बाहर)</option>
+              <option>हैंडपंप</option>
+              <option>कुआँ (ढका)</option>
+              <option>कुआँ (खुला)</option>
+              <option>नदी/तालाब</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q17</span> पेय जल की उपलब्धता</label>
+            <select id="f_water_avail">
+              <option value="">-- चुनें --</option>
+              <option>परिसर में</option>
+              <option>100 मीटर के भीतर</option>
+              <option>500 मीटर के भीतर</option>
+              <option>500 मीटर से अधिक दूर</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q18</span> प्रकाश का मुख्य स्रोत</label>
+            <select id="f_light_source">
+              <option value="">-- चुनें --</option>
+              <option>बिजली</option>
+              <option>केरोसिन</option>
+              <option>सौर ऊर्जा</option>
+              <option>अन्य तेल</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q19</span> शौचालय की सुलभता</label>
+            <select id="f_toilet_avail">
+              <option value="">-- चुनें --</option>
+              <option>घर में शौचालय है</option>
+              <option>सामुदायिक शौचालय</option>
+              <option>खुले में</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q20</span> किस प्रकार का शौचालय?</label>
+            <select id="f_toilet_type">
+              <option value="">-- चुनें --</option>
+              <option>वाटर सील लैट्रिन</option>
+              <option>पिट लैट्रिन</option>
+              <option>सेप्टिक टैंक</option>
+              <option>फ्लश/पोर फ्लश</option>
+              <option>अन्य</option>
+              <option>नहीं है</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q21</span> गंदे पानी का निकास</label>
+            <select id="f_drainage">
+              <option value="">-- चुनें --</option>
+              <option>बंद नाली</option>
+              <option>खुली नाली</option>
+              <option>कोई नाली नहीं</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q22</span> स्नानगृह की उपलब्धता</label>
+            <select id="f_bathroom">
+              <option value="">-- चुनें --</option>
+              <option>घर में स्नानगृह है</option>
+              <option>सामुदायिक स्नानगृह</option>
+              <option>नहीं है</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q23</span> रसोईघर की उपलब्धता (LPG/PNG)</label>
+            <select id="f_kitchen">
+              <option value="">-- चुनें --</option>
+              <option>अलग कमरे में रसोई है</option>
+              <option>साझा रसोई</option>
+              <option>खुली जगह पर</option>
+              <option>कोई रसोई नहीं</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q24</span> खाना पकाने का मुख्य साधन (Fuel)</label>
+            <select id="f_fuel">
+              <option value="">-- चुनें --</option>
+              <option>LPG/PNG</option>
+              <option>लकड़ी</option>
+              <option>गोबर के उपले</option>
+              <option>कोयला</option>
+              <option>केरोसिन</option>
+              <option>बायोगैस</option>
+              <option>अन्य</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q25</span> परिवार के खाने का मुख्य अनाज</label>
+            <select id="f_grain">
+              <option value="">-- चुनें --</option>
+              <option>चावल</option>
+              <option>गेहूँ</option>
+              <option>मक्का</option>
+              <option>अन्य अनाज</option>
+              <option>एक से अधिक</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section D: Gharelu Upkaran -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">📺</span> घरेलु उपकरणों की उपलब्धता (Q26-Q33)</h3>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field-group">
+            <label><span class="qno">Q26</span> रेडियो</label>
+            <select id="f_radio"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q27</span> टेलीविजन</label>
+            <select id="f_tv"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q28</span> इंटरनेट सुविधा</label>
+            <select id="f_internet"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q29</span> लैपटॉप/कंप्यूटर</label>
+            <select id="f_computer"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q30</span> टेलीफोन/मोबाइल/स्मार्ट फोन</label>
+            <select id="f_phone"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q31</span> साइकिल/स्कूटर/मोटरसाइकिल/मोपेड</label>
+            <select id="f_twowheeler"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q32</span> कार/जीप/वैन</label>
+            <select id="f_car"><option value="">-- चुनें --</option><option>है</option><option>नहीं है</option></select>
+          </div>
+          <div class="field-group">
+            <label><span class="qno">Q33</span> मोबाइल नंबर (जनगणना हेतु)</label>
+            <input type="tel" id="f_mobile" placeholder="मोबाइल नंबर">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save buttons -->
+    <div style="display:flex;gap:10px;margin-bottom:24px">
+      <button class="btn btn-success btn-full" onclick="saveEntry()">💾 सहेजें और अगला घर</button>
+      <button class="btn btn-secondary" onclick="saveEntry(false)">💾 सहेजें</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: ANALYSIS
+  ═══════════════════════════════════════════════ -->
+  <div class="page" id="page-analysis">
+    <div class="flex-between" style="margin-bottom:12px">
+      <h2 style="font-family:'Noto Serif Devanagari',serif;font-size:18px;color:var(--navy)">डेटा विश्लेषण</h2>
+      <button class="btn btn-primary btn-sm" onclick="renderAnalysis()">🔄 अपडेट</button>
+    </div>
+
+    <!-- Analysis cards -->
+    <div id="analysisContainer">
+      <div class="card">
+        <div class="card-header"><h3><span class="icon">📊</span> सारांश तालिका</h3></div>
+        <div class="card-body">
+          <div class="data-table-wrap" id="summaryTableWrap">
+            <p style="color:var(--gray-400);font-size:13px">डेटा जोड़ें फिर यहाँ विश्लेषण देखें।</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3><span class="icon">📉</span> फ़ील्ड आधारित सारांश</h3></div>
+        <div class="card-body" id="fieldSummaryContainer">
+          <p style="color:var(--gray-400);font-size:13px">विश्लेषण के लिए डेटा जोड़ें।</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: EXPORT
+  ═══════════════════════════════════════════════ -->
+  <div class="page" id="page-export">
+    <h2 style="font-family:'Noto Serif Devanagari',serif;font-size:18px;color:var(--navy);margin-bottom:14px">डेटा निर्यात</h2>
+
+    <div class="card">
+      <div class="card-header"><h3><span class="icon">📊</span> Excel (.xlsx) निर्यात</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">सभी घरों का डेटा Excel फ़ाइल में डाउनलोड करें। हर घर की जानकारी अलग row में और हर फ़ील्ड अलग column में होगी।</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-success" onclick="exportExcel()">📊 Excel डाउनलोड करें</button>
+          <button class="btn btn-outline" onclick="exportCSV()">📄 CSV डाउनलोड करें</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3><span class="icon">📄</span> PDF निर्यात</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">प्रिंट-ready PDF। सभी घरों की जानकारी professional format में।</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="exportPDF()">📄 PDF डाउनलोड करें</button>
+          <button class="btn btn-outline" onclick="printData()">🖨️ Print करें</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3><span class="icon">📝</span> Word (.doc) निर्यात</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">Word document में सभी घरों की जानकारी export करें।</p>
+        <button class="btn btn-secondary" onclick="exportWord()">📝 Word डाउनलोड करें</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3><span class="icon">💾</span> JSON बैकअप</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">पूरा डेटा JSON format में backup करें और restore करें।</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-navy btn-secondary" onclick="exportJSON()">💾 Backup (JSON)</button>
+          <label class="btn btn-outline" style="cursor:pointer">
+            📂 Restore करें
+            <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: SETTINGS
+  ═══════════════════════════════════════════════ -->
+  <div class="page" id="page-settings">
+    <h2 style="font-family:'Noto Serif Devanagari',serif;font-size:18px;color:var(--navy);margin-bottom:14px">सेटिंग्स</h2>
+
+    <!-- Ward Info -->
+    <div class="card">
+      <div class="card-header"><h3><span class="icon">📋</span> वार्ड एवं प्रगणक जानकारी</h3></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label>प्रगणक का नाम</label>
+            <input type="text" id="cfg_name" placeholder="आपका नाम">
+          </div>
+          <div class="field-group">
+            <label>वार्ड नंबर</label>
+            <input type="text" id="cfg_ward" placeholder="वार्ड नं.">
+          </div>
+          <div class="field-group">
+            <label>ग्राम/मोहल्ला</label>
+            <input type="text" id="cfg_village" placeholder="ग्राम/मोहल्ला">
+          </div>
+          <div class="field-group">
+            <label>पंचायत/नगर</label>
+            <input type="text" id="cfg_panchayat" placeholder="पंचायत/नगर">
+          </div>
+          <div class="field-group">
+            <label>जिला</label>
+            <input type="text" id="cfg_district" placeholder="जिला">
+          </div>
+          <div class="field-group">
+            <label>कुल आवंटित घर</label>
+            <input type="number" id="cfg_total_houses" placeholder="कुल घर">
+          </div>
+        </div>
+        <button class="btn btn-primary mt-12" onclick="saveConfig()">💾 सहेजें</button>
+      </div>
+    </div>
+
+    <!-- Firebase Config -->
+    <div class="card">
+      <div class="card-header"><h3><span class="icon">🔥</span> Firebase कॉन्फ़िगरेशन</h3></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--gray-400);margin-bottom:12px">⚠️ Firebase config के लिए HTML फ़ाइल में ऊपर script section में अपना config डालें।</p>
+        <div id="fbStatusDetail" style="font-size:13px;padding:10px;border-radius:8px;background:var(--gray-100)">
+          Firebase status जाँच हो रही है...
+        </div>
+      </div>
+    </div>
+
+    <!-- Field Management -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span class="icon">⚙️</span> फ़ील्ड प्रबंधन</h3>
+        <button class="btn btn-primary btn-sm" onclick="openAddFieldModal()">+ फ़ील्ड जोड़ें</button>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--gray-400);margin-bottom:12px">कौन से प्रश्न दिखाने हैं वो on/off करें या नए कस्टम फ़ील्ड जोड़ें।</p>
+        <div id="fieldConfigList"></div>
+      </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card" style="border:2px solid rgba(192,57,43,0.3)">
+      <div class="card-header" style="background:rgba(192,57,43,0.05)"><h3 style="color:var(--red)"><span class="icon" style="background:var(--red)">⚠️</span> डेटा प्रबंधन</h3></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">सावधानी से उपयोग करें।</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑️ सभी डेटा मिटाएं</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<!-- MODALS -->
+<!-- Edit House Modal -->
+<div class="modal-overlay" id="editHouseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="editModalTitle">घर संपादित करें</h3>
+      <button class="btn btn-icon" style="background:rgba(255,255,255,0.15);color:white" onclick="closeModal('editHouseModal')">✕</button>
+    </div>
+    <div class="modal-body" id="editModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('editHouseModal')">रद्द करें</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCurrentHouse()">🗑️ मिटाएं</button>
+      <button class="btn btn-success btn-sm" onclick="saveEditedHouse()">💾 अपडेट करें</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Field Modal -->
+<div class="modal-overlay" id="addFieldModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>नया फ़ील्ड जोड़ें</h3>
+      <button class="btn btn-icon" style="background:rgba(255,255,255,0.15);color:white" onclick="closeModal('addFieldModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group" style="margin-bottom:12px">
+        <label>फ़ील्ड का नाम (हिंदी में)</label>
+        <input type="text" id="newFieldLabel" placeholder="जैसे: आधार नंबर">
+      </div>
+      <div class="field-group" style="margin-bottom:12px">
+        <label>फ़ील्ड ID (अंग्रेज़ी में, बिना space)</label>
+        <input type="text" id="newFieldId" placeholder="जैसे: aadhar_no">
+      </div>
+      <div class="field-group">
+        <label>फ़ील्ड प्रकार</label>
+        <select id="newFieldType">
+          <option value="text">Text (लिखें)</option>
+          <option value="number">Number (संख्या)</option>
+          <option value="select">Dropdown (विकल्प)</option>
+          <option value="textarea">Long Text (बड़ा लिखें)</option>
+        </select>
+      </div>
+      <div class="field-group mt-8" id="newFieldOptionsGroup" style="display:none">
+        <label>Dropdown विकल्प (हर लाइन में एक)</label>
+        <textarea id="newFieldOptions" placeholder="विकल्प 1&#10;विकल्प 2&#10;विकल्प 3" rows="4"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('addFieldModal')">रद्द करें</button>
+      <button class="btn btn-primary btn-sm" onclick="addCustomField()">✅ जोड़ें</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Hidden print area -->
+<div id="printArea" style="display:none"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let _houses = [];
+let _config = {};
+let _customFields = [];
+let _editingId = null;
+let _currentFilter = 'all';
+let _fbSyncEnabled = false;
+
+// Core 33 fields definition
+const CORE_FIELDS = [
+  { id:'house_no', label:'मकान संख्या', type:'text', section:'id', required:true },
+  { id:'census_no', label:'जनगणना मकान संख्या', type:'text', section:'id' },
+  { id:'ward', label:'वार्ड/मोहल्ला', type:'text', section:'id' },
+  { id:'note', label:'प्रगणक नोट', type:'text', section:'id' },
+  { id:'floor_type', label:'घर का फर्श (Q3)', type:'select', section:'ghar', options:['मिट्टी','ईंट/पत्थर','सीमेंट/कंक्रीट','टाइल्स/मोजाइक','लकड़ी','अन्य'] },
+  { id:'wall_material', label:'दीवाल की सामग्री (Q4)', type:'select', section:'ghar', options:['घास/बांस/लकड़ी/मड','कच्ची ईंट/पत्थर','पक्की ईंट','सीमेंट/कंक्रीट','धातु/एस्बेस्टस','अन्य'] },
+  { id:'roof_material', label:'छत की सामग्री (Q5)', type:'select', section:'ghar', options:['घास/बांस/लकड़ी','टाइल्स','स्लेट/पत्थर','जस्ता/एस्बेस्टस','आरसीसी','अन्य'] },
+  { id:'house_use', label:'घर का उपयोग (Q6)', type:'select', section:'ghar', options:['केवल आवासीय','आवासीय + व्यावसायिक','केवल व्यावसायिक','अन्य'] },
+  { id:'house_condition', label:'घर की स्थिति (Q7)', type:'select', section:'ghar', options:['जीर्णशीर्ण','पुरानी लेकिन उपयोगी','संतोषजनक','अच्छी'] },
+  { id:'family_count', label:'परिवार की संख्या (Q8)', type:'number', section:'parivar' },
+  { id:'members_count', label:'घर में सदस्य (Q9)', type:'number', section:'parivar' },
+  { id:'head_name', label:'मुखिया का नाम (Q10)', type:'text', section:'parivar' },
+  { id:'head_gender', label:'मुखिया का लिंग (Q11)', type:'select', section:'parivar', options:['पुरुष','महिला','तृतीय लिंग'] },
+  { id:'head_caste', label:'मुखिया की जाति (Q12)', type:'select', section:'parivar', options:['अनुसूचित जाति (SC)','अनुसूचित जनजाति (ST)','अन्य पिछड़ा वर्ग (OBC)','सामान्य/अन्य'] },
+  { id:'ownership', label:'घर स्वयं/किराया (Q13)', type:'select', section:'parivar', options:['स्वयं का','किराए पर','निःशुल्क','अन्य'] },
+  { id:'rooms', label:'घर में कमरे (Q14)', type:'number', section:'parivar' },
+  { id:'married_families', label:'विवाहित परिवार (Q15)', type:'number', section:'parivar' },
+  { id:'water_source', label:'पेय जल स्रोत (Q16)', type:'select', section:'jal', options:['नल का पानी (घर में)','नल का पानी (बाहर)','हैंडपंप','कुआँ (ढका)','कुआँ (खुला)','नदी/तालाब','अन्य'] },
+  { id:'water_avail', label:'पेय जल उपलब्धता (Q17)', type:'select', section:'jal', options:['परिसर में','100 मीटर के भीतर','500 मीटर के भीतर','500 मीटर से अधिक दूर'] },
+  { id:'light_source', label:'प्रकाश स्रोत (Q18)', type:'select', section:'jal', options:['बिजली','केरोसिन','सौर ऊर्जा','अन्य तेल','अन्य'] },
+  { id:'toilet_avail', label:'शौचालय सुलभता (Q19)', type:'select', section:'jal', options:['घर में शौचालय है','सामुदायिक शौचालय','खुले में'] },
+  { id:'toilet_type', label:'शौचालय प्रकार (Q20)', type:'select', section:'jal', options:['वाटर सील लैट्रिन','पिट लैट्रिन','सेप्टिक टैंक','फ्लश/पोर फ्लश','अन्य','नहीं है'] },
+  { id:'drainage', label:'गंदे पानी निकास (Q21)', type:'select', section:'jal', options:['बंद नाली','खुली नाली','कोई नाली नहीं'] },
+  { id:'bathroom', label:'स्नानगृह (Q22)', type:'select', section:'jal', options:['घर में स्नानगृह है','सामुदायिक स्नानगृह','नहीं है'] },
+  { id:'kitchen', label:'रसोईघर (Q23)', type:'select', section:'jal', options:['अलग कमरे में रसोई है','साझा रसोई','खुली जगह पर','कोई रसोई नहीं'] },
+  { id:'fuel', label:'खाना पकाने का साधन (Q24)', type:'select', section:'jal', options:['LPG/PNG','लकड़ी','गोबर के उपले','कोयला','केरोसिन','बायोगैस','अन्य'] },
+  { id:'grain', label:'मुख्य अनाज (Q25)', type:'select', section:'jal', options:['चावल','गेहूँ','मक्का','अन्य अनाज','एक से अधिक'] },
+  { id:'radio', label:'रेडियो (Q26)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'tv', label:'टेलीविजन (Q27)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'internet', label:'इंटरनेट (Q28)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'computer', label:'लैपटॉप/कंप्यूटर (Q29)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'phone', label:'टेलीफोन/मोबाइल (Q30)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'twowheeler', label:'साइकिल/स्कूटर/मोटरसाइकिल (Q31)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'car', label:'कार/जीप/वैन (Q32)', type:'select', section:'upkaran', options:['है','नहीं है'] },
+  { id:'mobile', label:'मोबाइल नंबर (Q33)', type:'text', section:'upkaran' },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  loadFromStorage();
+  updateFBStatus();
+  renderDashboard();
+  renderHouseList();
+  renderFieldConfig();
+  loadConfigForm();
+  updateWardDisplay();
+
+  // Watch Firebase
+  setTimeout(() => {
+    if(window._fbReady) initFirebaseSync();
+    updateFBStatus();
+  }, 1500);
+
+  // Show/hide new field options
+  document.getElementById('newFieldType').addEventListener('change', function(){
+    document.getElementById('newFieldOptionsGroup').style.display = this.value === 'select' ? 'block' : 'none';
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  STORAGE
+// ═══════════════════════════════════════════════════════════
+function loadFromStorage() {
+  try {
+    _houses = JSON.parse(localStorage.getItem('jg_houses') || '[]');
+    _config = JSON.parse(localStorage.getItem('jg_config') || '{}');
+    _customFields = JSON.parse(localStorage.getItem('jg_custom_fields') || '[]');
+  } catch(e) { _houses = []; _config = {}; _customFields = []; }
+}
+
+function saveToStorage() {
+  localStorage.setItem('jg_houses', JSON.stringify(_houses));
+  localStorage.setItem('jg_config', JSON.stringify(_config));
+  localStorage.setItem('jg_custom_fields', JSON.stringify(_customFields));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FIREBASE SYNC
+// ═══════════════════════════════════════════════════════════
+async function initFirebaseSync() {
+  if(!window._fbReady) return;
+  try {
+    const snap = await window._fbGetDocs(window._fbCollection(window._fbDB, 'jg_houses'));
+    const fbHouses = [];
+    snap.forEach(d => fbHouses.push({ id: d.id, ...d.data() }));
+    // Merge: prefer Firebase data
+    if(fbHouses.length > 0) {
+      _houses = fbHouses;
+      saveToStorage();
+      renderDashboard();
+      renderHouseList();
+    }
+    _fbSyncEnabled = true;
+    updateFBStatus();
+    toast('✅ Firebase से sync हुआ', 'success');
+  } catch(e) {
+    console.warn('Firebase sync failed:', e);
+    updateFBStatus();
+  }
+}
+
+async function saveToFirebase(house) {
+  if(!window._fbReady || !_fbSyncEnabled) return;
+  try {
+    await window._fbSetDoc(
+      window._fbDoc(window._fbDB, 'jg_houses', house.id),
+      house
+    );
+  } catch(e) {
+    console.warn('Firebase save failed:', e);
+  }
+}
+
+async function deleteFromFirebase(id) {
+  if(!window._fbReady || !_fbSyncEnabled) return;
+  try {
+    await window._fbDeleteDoc(window._fbDoc(window._fbDB, 'jg_houses', id));
+  } catch(e) {}
+}
+
+function updateFBStatus() {
+  const el = document.getElementById('fbStatusBadge');
+  const detail = document.getElementById('fbStatusDetail');
+  if(window._fbReady && _fbSyncEnabled) {
+    el.className = 'fb-status ok'; el.textContent = '🔥 Firebase ✓';
+    if(detail) detail.innerHTML = '<span style="color:var(--green)">✅ Firebase connected और sync चालू है।</span>';
+  } else if(window._fbReady) {
+    el.className = 'fb-status'; el.textContent = '🔥 Firebase';
+    if(detail) detail.innerHTML = '<span style="color:var(--gold)">⏳ Firebase connected है, sync शुरू हो रहा है...</span>';
+  } else {
+    el.className = 'fb-status err'; el.textContent = '💾 Local Only';
+    if(detail) detail.innerHTML = '<span style="color:var(--red)">⚠️ Firebase config नहीं है। डेटा केवल LocalStorage में है।<br><br>HTML फ़ाइल में अपना Firebase config डालें।</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PAGE NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if(name === 'dashboard') renderDashboard();
+  if(name === 'houses') renderHouseList();
+  if(name === 'analysis') renderAnalysis();
+  if(name === 'settings') { renderFieldConfig(); loadConfigForm(); updateFBStatus(); }
+  if(name === 'entry' && !_editingId) clearForm();
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FORM - READ / WRITE
+// ═══════════════════════════════════════════════════════════
+function getFormData() {
+  const d = {};
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  allFields.forEach(f => {
+    const el = document.getElementById('f_' + f.id);
+    if(el) d[f.id] = el.value;
+  });
+  return d;
+}
+
+function setFormData(d) {
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  allFields.forEach(f => {
+    const el = document.getElementById('f_' + f.id);
+    if(el && d[f.id] !== undefined) el.value = d[f.id];
+  });
+}
+
+function clearForm() {
+  _editingId = null;
+  document.getElementById('entryPageTitle').textContent = 'नई प्रविष्टि';
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  allFields.forEach(f => {
+    const el = document.getElementById('f_' + f.id);
+    if(el) el.value = '';
+  });
+  // Pre-fill ward from config
+  const wEl = document.getElementById('f_ward');
+  if(wEl && _config.ward) wEl.value = _config.ward;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAVE ENTRY
+// ═══════════════════════════════════════════════════════════
+function saveEntry(goNext = true) {
+  const data = getFormData();
+  if(!data.house_no || data.house_no.trim() === '') {
+    toast('⚠️ मकान संख्या आवश्यक है', 'warning');
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  if(_editingId) {
+    const idx = _houses.findIndex(h => h.id === _editingId);
+    if(idx >= 0) {
+      _houses[idx] = { ..._houses[idx], ...data, updatedAt: now };
+      saveToStorage();
+      saveToFirebase(_houses[idx]);
+      toast('✅ घर ' + data.house_no + ' अपडेट हुआ', 'success');
+      _editingId = null;
+    }
+  } else {
+    // Check duplicate
+    if(_houses.find(h => h.house_no === data.house_no.trim())) {
+      toast('⚠️ मकान ' + data.house_no + ' पहले से मौजूद है', 'warning');
+      return;
+    }
+    const house = { id: 'h_' + Date.now(), ...data, createdAt: now, updatedAt: now };
+    _houses.push(house);
+    saveToStorage();
+    saveToFirebase(house);
+    toast('✅ मकान ' + data.house_no + ' सहेजा गया', 'success');
+  }
+
+  updateBadge();
+  if(goNext) {
+    clearForm();
+    // Auto-increment house number
+    const nums = _houses.map(h => parseInt(h.house_no)).filter(n => !isNaN(n));
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    const el = document.getElementById('f_house_no');
+    if(el) el.value = String(next).padStart(3, '0');
+    el && el.focus();
+  } else {
+    showPage('houses');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COMPLETION STATUS
+// ═══════════════════════════════════════════════════════════
+function getCompletion(house) {
+  const importantFields = ['floor_type','wall_material','roof_material','house_use',
+    'family_count','members_count','head_name','head_gender','head_caste',
+    'ownership','water_source','light_source','toilet_avail','fuel'];
+  const filled = importantFields.filter(f => house[f] && house[f] !== '').length;
+  const pct = Math.round((filled / importantFields.length) * 100);
+  if(pct >= 90) return { status:'complete', pct, label:'पूर्ण', cls:'done' };
+  if(pct >= 30) return { status:'partial', pct, label:pct+'% भरा', cls:'part' };
+  return { status:'empty', pct, label:'खाली', cls:'pend' };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const total = _houses.length;
+  const complete = _houses.filter(h => getCompletion(h).status === 'complete').length;
+  const partial = _houses.filter(h => getCompletion(h).status === 'partial').length;
+  const pending = total - complete - partial;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statComplete').textContent = complete;
+  document.getElementById('statPartial').textContent = partial;
+  document.getElementById('statPending').textContent = pending;
+
+  const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
+  document.getElementById('dashProgressPct').textContent = pct + '%';
+  document.getElementById('dashProgressBar').style.width = pct + '%';
+  document.getElementById('dashTotalLabel').textContent = 'कुल ' + (_config.total_houses || total) + ' घर';
+
+  updateBadge();
+  updateWardDisplay();
+
+  // Recent entries
+  const recent = [..._houses].reverse().slice(0, 5);
+  const rc = document.getElementById('recentEntries');
+  if(recent.length === 0) {
+    rc.innerHTML = '<div class="empty-state"><div class="empty-icon">🏠</div><p>अभी कोई प्रविष्टि नहीं है</p><small>नई प्रविष्टि बटन से शुरू करें</small></div>';
+    return;
+  }
+  rc.innerHTML = recent.map(h => {
+    const c = getCompletion(h);
+    return `<div class="house-card ${c.status}" onclick="editHouse('${h.id}')" style="margin-bottom:8px">
+      <div class="house-card-info">
+        <h4>🏠 मकान ${h.house_no}${h.head_name ? ' — ' + h.head_name : ''}</h4>
+        <p>${h.ward || _config.ward || '—'} ${h.createdAt ? '· ' + new Date(h.createdAt).toLocaleDateString('hi') : ''}</p>
+      </div>
+      <div class="house-card-right">
+        <span class="progress-pill ${c.cls}">${c.label}</span>
+        <span style="font-size:18px;color:var(--gray-400)">›</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateBadge() {
+  document.getElementById('houseCountBadge').textContent = _houses.length;
+}
+
+function updateWardDisplay() {
+  const el = document.getElementById('wardInfoDisplay');
+  if(_config.name) {
+    el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+      <div><span style="color:var(--gray-400);font-size:11px">प्रगणक</span><br><strong>${_config.name || '—'}</strong></div>
+      <div><span style="color:var(--gray-400);font-size:11px">वार्ड</span><br><strong>${_config.ward || '—'}</strong></div>
+      <div><span style="color:var(--gray-400);font-size:11px">ग्राम</span><br><strong>${_config.village || '—'}</strong></div>
+      <div><span style="color:var(--gray-400);font-size:11px">जिला</span><br><strong>${_config.district || '—'}</strong></div>
+    </div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HOUSE LIST
+// ═══════════════════════════════════════════════════════════
+function setFilter(f, el) {
+  _currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderHouseList();
+}
+
+function renderHouseList() {
+  const search = (document.getElementById('houseSearch')?.value || '').toLowerCase();
+  let list = _houses.filter(h => {
+    const matchSearch = !search || h.house_no.toLowerCase().includes(search) || (h.head_name || '').toLowerCase().includes(search);
+    const c = getCompletion(h);
+    const matchFilter = _currentFilter === 'all' || c.status === _currentFilter;
+    return matchSearch && matchFilter;
+  });
+
+  // Sort by house number
+  list.sort((a, b) => {
+    const na = parseInt(a.house_no) || 0, nb = parseInt(b.house_no) || 0;
+    return na - nb || a.house_no.localeCompare(b.house_no);
+  });
+
+  const container = document.getElementById('houseListContainer');
+  if(list.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏘️</div><p>कोई घर नहीं मिला</p></div>';
+    return;
+  }
+  container.innerHTML = list.map(h => {
+    const c = getCompletion(h);
+    return `<div class="house-card ${c.status}" onclick="editHouse('${h.id}')">
+      <div class="house-card-info">
+        <h4>🏠 मकान नं. ${h.house_no}${h.head_name ? ' — ' + h.head_name : ''}</h4>
+        <p>${h.ward || _config.ward || '—'}${h.members_count ? ' · ' + h.members_count + ' सदस्य' : ''}${h.head_caste ? ' · ' + h.head_caste : ''}</p>
+      </div>
+      <div class="house-card-right">
+        <span class="progress-pill ${c.cls}">${c.label}</span>
+        <span style="font-size:20px;color:var(--gray-400)">›</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EDIT HOUSE
+// ═══════════════════════════════════════════════════════════
+function editHouse(id) {
+  const house = _houses.find(h => h.id === id);
+  if(!house) return;
+  _editingId = id;
+  document.getElementById('entryPageTitle').textContent = 'मकान ' + house.house_no + ' संपादित करें';
+  setFormData(house);
+  showPage('entry');
+}
+
+function deleteCurrentHouse() {
+  if(!_editingId) return;
+  const house = _houses.find(h => h.id === _editingId);
+  if(!house) return;
+  if(!confirm('क्या आप मकान ' + house.house_no + ' का डेटा मिटाना चाहते हैं?')) return;
+  _houses = _houses.filter(h => h.id !== _editingId);
+  deleteFromFirebase(_editingId);
+  saveToStorage();
+  toast('🗑️ मकान ' + house.house_no + ' मिटाया गया', 'error');
+  _editingId = null;
+  closeModal('editHouseModal');
+  clearForm();
+  renderDashboard();
+  renderHouseList();
+}
+
+function saveEditedHouse() {
+  saveEntry(false);
+  closeModal('editHouseModal');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ANALYSIS
+// ═══════════════════════════════════════════════════════════
+function renderAnalysis() {
+  if(_houses.length === 0) return;
+
+  // Summary table
+  const allFields = [...CORE_FIELDS];
+  const tableFields = allFields.filter(f => !['id','note','census_no','ward'].includes(f.id)).slice(0,8);
+  let html = '<table class="data-table"><thead><tr><th>मकान नं.</th><th>मुखिया</th><th>सदस्य</th><th>फर्श</th><th>शौचालय</th><th>जल स्रोत</th><th>प्रकाश</th><th>TV</th><th>Mobile</th></tr></thead><tbody>';
+  _houses.forEach(h => {
+    html += `<tr>
+      <td><strong>${h.house_no}</strong></td>
+      <td>${h.head_name||'—'}</td>
+      <td>${h.members_count||'—'}</td>
+      <td>${h.floor_type||'—'}</td>
+      <td>${h.toilet_avail||'—'}</td>
+      <td>${h.water_source||'—'}</td>
+      <td>${h.light_source||'—'}</td>
+      <td>${h.tv||'—'}</td>
+      <td>${h.mobile||'—'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('summaryTableWrap').innerHTML = html;
+
+  // Field summaries
+  const fsContainer = document.getElementById('fieldSummaryContainer');
+  const summaryFields = [
+    { id:'head_caste', label:'जाति वितरण' },
+    { id:'floor_type', label:'फर्श प्रकार' },
+    { id:'toilet_avail', label:'शौचालय स्थिति' },
+    { id:'water_source', label:'पेय जल स्रोत' },
+    { id:'light_source', label:'प्रकाश स्रोत' },
+    { id:'fuel', label:'ईंधन प्रकार' },
+    { id:'ownership', label:'मकान स्वामित्व' },
+    { id:'internet', label:'इंटरनेट' },
+    { id:'tv', label:'टेलीविजन' },
+    { id:'phone', label:'मोबाइल फोन' },
+  ];
+
+  let fsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  summaryFields.forEach(sf => {
+    const counts = {};
+    _houses.forEach(h => {
+      const v = h[sf.id] || 'अज्ञात';
+      counts[v] = (counts[v]||0) + 1;
+    });
+    const total = _houses.length;
+    fsHtml += `<div style="background:var(--off-white);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
+      <p style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:8px">${sf.label}</p>`;
+    Object.entries(counts).sort((a,b) => b[1]-a[1]).forEach(([k,v]) => {
+      const pct = Math.round(v/total*100);
+      fsHtml += `<div style="margin-bottom:5px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+          <span style="color:var(--gray-600)">${k}</span>
+          <span style="font-weight:700;color:var(--navy)">${v} (${pct}%)</span>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    });
+    fsHtml += '</div>';
+  });
+  fsHtml += '</div>';
+
+  // Totals
+  const totalMembers = _houses.reduce((s,h) => s + (parseInt(h.members_count)||0), 0);
+  const totalFamilies = _houses.reduce((s,h) => s + (parseInt(h.family_count)||0), 0);
+  const totalRooms = _houses.reduce((s,h) => s + (parseInt(h.rooms)||0), 0);
+  fsHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+    <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px;border:1px solid var(--gray-200)">
+      <div style="font-size:22px;font-weight:700;color:var(--navy)">${totalMembers}</div>
+      <div style="font-size:11px;color:var(--gray-400)">कुल सदस्य</div>
+    </div>
+    <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px;border:1px solid var(--gray-200)">
+      <div style="font-size:22px;font-weight:700;color:var(--saffron)">${totalFamilies}</div>
+      <div style="font-size:11px;color:var(--gray-400)">कुल परिवार</div>
+    </div>
+    <div style="text-align:center;padding:12px;background:var(--off-white);border-radius:8px;border:1px solid var(--gray-200)">
+      <div style="font-size:22px;font-weight:700;color:var(--green)">${totalRooms}</div>
+      <div style="font-size:11px;color:var(--gray-400)">कुल कमरे</div>
+    </div>
+  </div>` + fsHtml;
+
+  fsContainer.innerHTML = fsHtml;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT: EXCEL (CSV-based .xlsx-named)
+// ═══════════════════════════════════════════════════════════
+function exportCSV() {
+  if(_houses.length === 0) { toast('⚠️ कोई डेटा नहीं है', 'warning'); return; }
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  const headers = allFields.map(f => f.label);
+  const rows = _houses.map(h => allFields.map(f => {
+    const v = h[f.id] || '';
+    return '"' + String(v).replace(/"/g, '""') + '"';
+  }));
+  const csv = [headers.map(h => '"'+h+'"').join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8;' });
+  downloadBlob(blob, 'जनगणना_2027_' + (new Date().toLocaleDateString('hi')) + '.csv');
+  toast('📄 CSV डाउनलोड हो रहा है', 'success');
+}
+
+function exportExcel() {
+  // Generate HTML-based Excel (opens in Excel)
+  if(_houses.length === 0) { toast('⚠️ कोई डेटा नहीं है', 'warning'); return; }
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  const ward = _config.ward || '';
+  const name = _config.name || '';
+  const date = new Date().toLocaleDateString('hi-IN');
+
+  let html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="UTF-8">
+<style>
+  table { border-collapse: collapse; width:100%; font-family: Arial; font-size:10pt; }
+  th { background:#0A2540; color:white; padding:6px 8px; border:1px solid #ccc; font-weight:bold; text-align:center; }
+  td { padding:5px 8px; border:1px solid #ddd; vertical-align:middle; }
+  tr:nth-child(even) td { background:#F8F7F2; }
+  .title-row td { background:#FF6B00; color:white; font-weight:bold; font-size:12pt; text-align:center; }
+  .info-row td { background:#F0EEE8; font-size:9pt; }
+</style>
+</head><body>
+<table>
+<tr class="title-row"><td colspan="${allFields.length+1}">बिहार जनगणना 2027 - मकान सूचीकरण डेटा</td></tr>
+<tr class="info-row">
+  <td colspan="${Math.floor((allFields.length+1)/3)}">प्रगणक: ${name}</td>
+  <td colspan="${Math.floor((allFields.length+1)/3)}">वार्ड: ${ward}</td>
+  <td colspan="${(allFields.length+1) - 2*Math.floor((allFields.length+1)/3)}">तिथि: ${date}</td>
+</tr>
+<tr><th>क्र.सं.</th>`;
+  allFields.forEach(f => { html += `<th>${f.label}</th>`; });
+  html += '</tr>';
+
+  _houses.forEach((h, i) => {
+    html += `<tr><td style="text-align:center;font-weight:bold">${i+1}</td>`;
+    allFields.forEach(f => {
+      html += `<td>${h[f.id] || ''}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table></body></html>';
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  downloadBlob(blob, 'जनगणना_2027_' + ward + '_' + date.replace(/\//g,'_') + '.xls');
+  toast('📊 Excel डाउनलोड हो रहा है', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT: PDF via Print
+// ═══════════════════════════════════════════════════════════
+function exportPDF() {
+  if(_houses.length === 0) { toast('⚠️ कोई डेटा नहीं है', 'warning'); return; }
+  const printWin = window.open('', '_blank', 'width=900,height=700');
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  const ward = _config.ward || '—';
+  const name = _config.name || '—';
+  const date = new Date().toLocaleDateString('hi-IN');
+
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans Devanagari', sans-serif; font-size: 10pt; color: #1a1a2e; padding: 20px; }
+  .header { text-align:center; margin-bottom:20px; border-bottom: 3px double #FF6B00; padding-bottom:12px; }
+  .header h1 { font-size:16pt; color:#0A2540; }
+  .header h2 { font-size:11pt; color:#FF6B00; margin-top:4px; }
+  .info-bar { display:flex; justify-content:space-between; background:#F0EEE8; padding:8px 14px; border-radius:6px; margin-bottom:16px; font-size:9pt; }
+  table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+  th { background:#0A2540; color:white; padding:6px; font-size:8.5pt; text-align:left; border:1px solid #ccc; }
+  td { padding:5px 6px; border:1px solid #ddd; font-size:8.5pt; vertical-align:top; }
+  tr:nth-child(even) td { background:#f8f8f8; }
+  .house-block { page-break-inside: avoid; margin-bottom:18px; border:1.5px solid #ddd; border-radius:6px; overflow:hidden; }
+  .house-title { background:#0A2540; color:white; padding:8px 14px; font-weight:700; font-size:11pt; display:flex; justify-content:space-between; }
+  .house-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:0; }
+  .house-field { padding:6px 10px; border-bottom:1px solid #eee; border-right:1px solid #eee; }
+  .house-field label { font-size:7.5pt; color:#666; display:block; }
+  .house-field span { font-size:9.5pt; font-weight:600; color:#0A2540; }
+  .footer { text-align:center; font-size:8pt; color:#888; border-top:1px solid #ddd; padding-top:10px; }
+  @media print { @page { margin:1.5cm; size:A4; } body { padding:0; } }
+</style></head><body>
+<div class="header">
+  <h1>बिहार सरकार - राजस्व एवं भूमि सुधार विभाग (जनगणना कोषांग)</h1>
+  <h2>जनगणना-2027 मकान सूचीकरण - डेटा रिपोर्ट</h2>
+</div>
+<div class="info-bar">
+  <span>प्रगणक: <strong>${name}</strong></span>
+  <span>वार्ड: <strong>${ward}</strong></span>
+  <span>कुल मकान: <strong>${_houses.length}</strong></span>
+  <span>तिथि: <strong>${date}</strong></span>
+</div>`;
+
+  // Full data table
+  const displayFields = allFields.filter(f => !['note'].includes(f.id));
+  html += `<table><thead><tr><th>क्र.सं.</th><th>मकान नं.</th>`;
+  displayFields.slice(2).forEach(f => { html += `<th>${f.label.replace(/ \(Q\d+\)/,'')}</th>`; });
+  html += `</tr></thead><tbody>`;
+  _houses.forEach((h,i) => {
+    html += `<tr><td>${i+1}</td><td><strong>${h.house_no}</strong></td>`;
+    displayFields.slice(2).forEach(f => { html += `<td>${h[f.id]||''}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Individual house blocks
+  html += '<h3 style="margin:20px 0 12px;color:#0A2540;font-size:13pt">व्यक्तिगत मकान विवरण</h3>';
+  _houses.forEach((h,i) => {
+    const c = getCompletion(h);
+    html += `<div class="house-block">
+      <div class="house-title">
+        <span>मकान ${h.house_no}${h.head_name ? ' — ' + h.head_name : ''}</span>
+        <span style="font-size:9pt;opacity:0.8">${c.label}</span>
+      </div>
+      <div class="house-grid">`;
+    displayFields.forEach(f => {
+      html += `<div class="house-field"><label>${f.label.replace(/ \(Q\d+\)/,'')}</label><span>${h[f.id]||'—'}</span></div>`;
+    });
+    html += '</div></div>';
+  });
+
+  html += `<div class="footer">Bihar Census 2027 | Generated: ${new Date().toLocaleString('hi-IN')} | Total Houses: ${_houses.length}</div>
+</body></html>`;
+
+  printWin.document.write(html);
+  printWin.document.close();
+  setTimeout(() => { printWin.focus(); printWin.print(); }, 800);
+  toast('📄 PDF प्रिंट विंडो खुल रही है', 'success');
+}
+
+function printData() { exportPDF(); }
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT: WORD
+// ═══════════════════════════════════════════════════════════
+function exportWord() {
+  if(_houses.length === 0) { toast('⚠️ कोई डेटा नहीं है', 'warning'); return; }
+  const allFields = [...CORE_FIELDS, ..._customFields];
+  const ward = _config.ward || '';
+  const name = _config.name || '';
+  const date = new Date().toLocaleDateString('hi-IN');
+
+  let html = `<html xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="UTF-8">
+<style>
+  body { font-family: "Noto Sans Devanagari", Arial; font-size: 11pt; }
+  h1 { color: #0A2540; text-align:center; font-size:16pt; }
+  h2 { color: #FF6B00; text-align:center; font-size:12pt; }
+  .info { text-align:center; margin:10px 0; font-size:10pt; color:#555; }
+  table { border-collapse:collapse; width:100%; margin:16px 0; font-size:9.5pt; }
+  th { background:#0A2540; color:white; padding:6px; border:1px solid #999; }
+  td { padding:5px; border:1px solid #ccc; }
+  tr:nth-child(even) td { background:#F8F8F8; }
+  h3 { color:#0A2540; margin:20px 0 8px; font-size:12pt; border-bottom:2px solid #FF6B00; padding-bottom:4px; }
+  .field-row { margin:4px 0; }
+  .field-label { color:#666; font-size:9pt; }
+  .field-val { font-weight:bold; }
+</style></head><body>
+<h1>बिहार सरकार - राजस्व एवं भूमि सुधार विभाग</h1>
+<h2>जनगणना-2027 मकान सूचीकरण - रिपोर्ट</h2>
+<p class="info">प्रगणक: ${name} | वार्ड: ${ward} | तिथि: ${date} | कुल मकान: ${_houses.length}</p>
+<hr>
+<h3>डेटा तालिका</h3>
+<table><thead><tr><th>क्र.सं.</th>`;
+  allFields.slice(0,12).forEach(f => { html += `<th>${f.label.replace(/ \(Q\d+\)/,'')}</th>`; });
+  html += `</tr></thead><tbody>`;
+  _houses.forEach((h,i) => {
+    html += `<tr><td>${i+1}</td>`;
+    allFields.slice(0,12).forEach(f => { html += `<td>${h[f.id]||''}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<h3>व्यक्तिगत मकान विवरण</h3>';
+  _houses.forEach((h,i) => {
+    html += `<h4 style="color:#FF6B00;margin:14px 0 6px">मकान ${h.house_no}${h.head_name?' — '+h.head_name:''}</h4><table><tbody>`;
+    allFields.forEach(f => {
+      if(h[f.id]) html += `<tr><td class="field-label" width="40%">${f.label}</td><td class="field-val">${h[f.id]}</td></tr>`;
+    });
+    html += '</tbody></table>';
+  });
+  html += '</body></html>';
+
+  const blob = new Blob([html], { type: 'application/msword;charset=utf-8;' });
+  downloadBlob(blob, 'जनगणना_2027_' + ward + '.doc');
+  toast('📝 Word डाउनलोड हो रहा है', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT: JSON BACKUP
+// ═══════════════════════════════════════════════════════════
+function exportJSON() {
+  const data = { houses: _houses, config: _config, customFields: _customFields, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, 'जनगणना_backup_' + new Date().toISOString().slice(0,10) + '.json');
+  toast('💾 Backup डाउनलोड हो रहा है', 'success');
+}
+
+function importJSON(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(data.houses) {
+        _houses = data.houses;
+        _config = data.config || _config;
+        _customFields = data.customFields || _customFields;
+        saveToStorage();
+        renderDashboard(); renderHouseList();
+        toast('✅ ' + _houses.length + ' मकान restore हुए', 'success');
+      }
+    } catch(ex) { toast('❌ JSON फ़ाइल गलत है', 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS / CONFIG
+// ═══════════════════════════════════════════════════════════
+function saveConfig() {
+  _config = {
+    name: document.getElementById('cfg_name').value,
+    ward: document.getElementById('cfg_ward').value,
+    village: document.getElementById('cfg_village').value,
+    panchayat: document.getElementById('cfg_panchayat').value,
+    district: document.getElementById('cfg_district').value,
+    total_houses: document.getElementById('cfg_total_houses').value,
+  };
+  saveToStorage();
+  updateWardDisplay();
+  toast('✅ सेटिंग्स सहेजी गईं', 'success');
+}
+
+function loadConfigForm() {
+  if(!_config) return;
+  ['name','ward','village','panchayat','district','total_houses'].forEach(k => {
+    const el = document.getElementById('cfg_' + k);
+    if(el && _config[k]) el.value = _config[k];
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FIELD CONFIG
+// ═══════════════════════════════════════════════════════════
+function renderFieldConfig() {
+  const container = document.getElementById('fieldConfigList');
+  const disabled = JSON.parse(localStorage.getItem('jg_disabled_fields') || '[]');
+  let html = '';
+  const sections = { id:'पहचान', ghar:'घर', parivar:'परिवार', jal:'जल/स्वच्छता', upkaran:'उपकरण' };
+  let lastSection = '';
+  CORE_FIELDS.forEach(f => {
+    if(f.section !== lastSection) {
+      html += `<p style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;margin:10px 0 5px">${sections[f.section]||f.section}</p>`;
+      lastSection = f.section;
+    }
+    const isOn = !disabled.includes(f.id);
+    html += `<div class="config-field-item ${isOn?'active':''}">
+      <span style="font-size:12px;color:var(--navy)">${f.label}</span>
+      <label class="toggle">
+        <input type="checkbox" ${isOn?'checked':''} onchange="toggleField('${f.id}',this)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>`;
+  });
+  _customFields.forEach(f => {
+    html += `<div class="config-field-item active" style="border-color:var(--gold)">
+      <span style="font-size:12px;color:var(--navy)">🔧 ${f.label} <span class="tag tag-orange">Custom</span></span>
+      <button class="btn btn-danger btn-sm" onclick="removeCustomField('${f.id}')">🗑️</button>
+    </div>`;
+  });
+  container.innerHTML = html || '<p style="color:var(--gray-400);font-size:12px">कोई फ़ील्ड नहीं</p>';
+}
+
+function toggleField(id, el) {
+  let disabled = JSON.parse(localStorage.getItem('jg_disabled_fields') || '[]');
+  if(el.checked) disabled = disabled.filter(d => d !== id);
+  else disabled.push(id);
+  localStorage.setItem('jg_disabled_fields', JSON.stringify(disabled));
+  renderFieldConfig();
+}
+
+function openAddFieldModal() { openModal('addFieldModal'); }
+
+function addCustomField() {
+  const label = document.getElementById('newFieldLabel').value.trim();
+  const id = document.getElementById('newFieldId').value.trim().replace(/\s+/g,'_');
+  const type = document.getElementById('newFieldType').value;
+  const optionsRaw = document.getElementById('newFieldOptions').value;
+
+  if(!label || !id) { toast('⚠️ नाम और ID आवश्यक हैं', 'warning'); return; }
+  if(_customFields.find(f => f.id === id) || CORE_FIELDS.find(f => f.id === id)) {
+    toast('⚠️ यह ID पहले से मौजूद है', 'warning'); return;
+  }
+
+  const field = { id, label, type, section:'custom', custom:true };
+  if(type === 'select') field.options = optionsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
+  _customFields.push(field);
+  saveToStorage();
+  renderFieldConfig();
+  // Add form field dynamically
+  addCustomFieldToForm(field);
+  closeModal('addFieldModal');
+  document.getElementById('newFieldLabel').value = '';
+  document.getElementById('newFieldId').value = '';
+  document.getElementById('newFieldOptions').value = '';
+  toast('✅ फ़ील्ड जोड़ा गया: ' + label, 'success');
+}
+
+function addCustomFieldToForm(field) {
+  // Find the save button area in entry form
+  const lastCard = document.querySelector('#page-entry .card:last-of-type .card-body');
+  if(!lastCard) return;
+  const div = document.createElement('div');
+  div.className = 'field-group';
+  div.id = 'custom_field_' + field.id;
+  div.innerHTML = `<label><span class="qno" style="background:var(--gold);color:var(--navy)">+</span> ${field.label}</label>`;
+  if(field.type === 'select') {
+    div.innerHTML += `<select id="f_${field.id}"><option value="">-- चुनें --</option>${field.options.map(o=>`<option>${o}</option>`).join('')}</select>`;
+  } else if(field.type === 'textarea') {
+    div.innerHTML += `<textarea id="f_${field.id}" rows="3"></textarea>`;
+  } else {
+    div.innerHTML += `<input type="${field.type}" id="f_${field.id}">`;
+  }
+  lastCard.appendChild(div);
+}
+
+function removeCustomField(id) {
+  if(!confirm('इस custom फ़ील्ड को हटाएं?')) return;
+  _customFields = _customFields.filter(f => f.id !== id);
+  saveToStorage();
+  renderFieldConfig();
+  const el = document.getElementById('custom_field_' + id);
+  if(el) el.remove();
+  toast('🗑️ फ़ील्ड हटाया गया', 'error');
+}
+
+function clearAllData() {
+  if(!confirm('⚠️ सभी डेटा मिट जाएगा। क्या आप sure हैं?')) return;
+  if(!confirm('एक बार और confirm करें - सभी ' + _houses.length + ' मकानों का डेटा मिटेगा।')) return;
+  _houses = [];
+  saveToStorage();
+  renderDashboard(); renderHouseList();
+  toast('🗑️ सभी डेटा मिटा दिया गया', 'error');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openWardModal() { showPage('settings'); }
+
+// Click outside to close
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg, type = '') {
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Init custom fields in form on load
+window.addEventListener('DOMContentLoaded', () => {
+  _customFields.forEach(f => addCustomFieldToForm(f));
+});
+</script>
+</body>
+</html>
