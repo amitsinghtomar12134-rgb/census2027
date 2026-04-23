@@ -466,18 +466,18 @@ body{font-family:'Noto Sans Devanagari',sans-serif;background:var(--off-white);c
       <!-- ══ SECTION A: FIXED IDs ══ -->
       <div class="section-head">
         <div class="s-icon">🔒</div>
-        <h4>स्थिर पहचान (Fixed)</h4>
+        <h4>स्थिर पहचान (Auto-generated)</h4>
       </div>
       <div class="form-grid">
         <div class="field-group">
-          <label><span class="qno fixed">प्र.1</span> लाइन क्रमांक (Line No.)</label>
-          <input type="text" id="hh_no" placeholder="Auto" readonly>
-          <span class="field-locked">🔒 Auto-generated</span>
+          <label><span class="qno fixed">प्र.1</span> लाइन क्रमांक (3-अंकीय, HLB-स्तरीय)</label>
+          <input type="text" id="hh_no" placeholder="Auto (001, 002...)" readonly style="background:var(--gray-100);font-weight:700;font-size:16px;letter-spacing:2px;">
+          <span class="field-locked">🔒 Auto — HLB-wide 3-digit (001, 002, 003...)</span>
         </div>
         <div class="field-group">
-          <label><span class="qno fixed">प्र.9</span> परिवार क्रमांक (HH No.)</label>
-          <input type="text" id="hh_parivar_no" placeholder="Auto" readonly>
-          <span class="field-locked">🔒 Auto-generated</span>
+          <label><span class="qno fixed">प्र.9</span> परिवार क्रमांक (3-अंकीय, HLB-स्तरीय)</label>
+          <input type="text" id="hh_parivar_no" placeholder="Auto (001, 002...)" readonly style="background:var(--gray-100);font-weight:700;font-size:16px;letter-spacing:2px;">
+          <span class="field-locked">🔒 Auto — HLB-wide 3-digit (001...998, संस्थागत=999)</span>
         </div>
         <div class="field-group">
           <label><span class="qno fixed">SE ID</span> स्व-गणना आईडी (यदि उपलब्ध)</label>
@@ -488,7 +488,7 @@ body{font-family:'Noto Sans Devanagari',sans-serif;background:var(--off-white);c
           <select id="hh_type">
             <option value="">-- चुनें --</option>
             <option value="सामान्य">सामान्य परिवार</option>
-            <option value="संस्थागत">संस्थागत परिवार (HH No. 999)</option>
+            <option value="संस्थागत">संस्थागत परिवार (परिवार क्रमांक = 999)</option>
             <option value="बेघर">बेघर परिवार</option>
           </select>
           <span class="field-locked">🔒 एक बार सेट होने पर लॉक</span>
@@ -1027,8 +1027,9 @@ body{font-family:'Noto Sans Devanagari',sans-serif;background:var(--off-white);c
       </p>
       <div class="form-grid cols-1">
         <div class="field-group">
-          <label><span class="qno fixed">Fixed</span> भवन संख्या (Bhavan No.)*</label>
-          <input type="text" id="b_no" placeholder="जैसे: 01, B-02, 003" required>
+          <label><span class="qno fixed">प्र.2</span> भवन नम्बर (अल्फा-न्यूमेरिक, आप भरें)*</label>
+          <input type="text" id="b_no" placeholder="जैसे: 1, A-12, 10/1, B-02" required>
+          <span class="field-locked">📝 भवन के मुख्य दरवाज़े पर लिखा नंबर — कोई भी फॉर्मेट</span>
         </div>
         <div class="field-group">
           <label><span class="qno fixed">Fixed</span> नगर पालिका/स्थानीय/जनगणना भवन संख्या</label>
@@ -1126,26 +1127,16 @@ body{font-family:'Noto Sans Devanagari',sans-serif;background:var(--off-white);c
     </div>
     <div class="modal-body">
       <p style="font-size:11.5px;color:var(--gray-400);margin-bottom:14px;padding:8px 10px;background:rgba(26,111,168,0.06);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;">
-        🔒 <strong>जनगणना मकान संख्या Fixed है</strong> — एक बार भरने के बाद यह बदला नहीं जाएगा।
+        🔒 <strong>जनगणना मकान संख्या Auto है</strong> — 4-अंकीय (0001, 0002...) HLB-स्तरीय क्रमांक स्वतः बनेगा।
       </p>
       <div class="form-grid cols-1">
         <div class="field-group">
-          <label><span class="qno fixed">Fixed</span> जनगणना मकान संख्या*</label>
-          <input type="text" id="ch_no" placeholder="जैसे: CH-01, 01">
+          <label><span class="qno fixed">प्र.3</span> जनगणना मकान संख्या (Auto 4-अंकीय)</label>
+          <input type="text" id="ch_no" readonly style="background:var(--gray-100);font-weight:700;font-size:16px;letter-spacing:2px;">
+          <span class="field-locked">🔒 Auto-generated — 4-digit (0001, 0002...)</span>
         </div>
       </div>
       <div class="form-grid" style="margin-top:10px;">
-        <div class="field-group">
-          <label><span class="qno fixed">Fixed</span> जनगणना मकान का उपयोग</label>
-          <select id="ch_use">
-            <option value="">-- चुनें --</option>
-            <option>आवासीय</option>
-            <option>आवासीय + व्यावसायिक</option>
-            <option>केवल व्यावसायिक/कार्यालय</option>
-            <option>खाली/बंद</option>
-            <option>अन्य</option>
-          </select>
-        </div>
         <div class="field-group">
           <label>अनुमानित परिवार संख्या</label>
           <input type="number" id="ch_est_hh" placeholder="0" min="0">
@@ -1558,22 +1549,24 @@ function openBuilding(bid) {
 }
 
 function openAddCensusHouseModal() {
-  document.getElementById('ch_no').value='';
-  document.getElementById('ch_use').value='';
-  document.getElementById('ch_est_hh').value='';
+  // Auto-calculate next 4-digit census house number (HLB-wide global)
+  let totalCH = 0;
+  _data.buildings.forEach(b => { totalCH += (b.census_houses||[]).length; });
+  const nextCHNo = String(totalCH + 1).padStart(4, '0');
+  document.getElementById('ch_no').value = nextCHNo;
+  document.getElementById('ch_est_hh').value = '';
   openModal('addCensusHouseModal');
 }
 
 function saveCensusHouse() {
   const no = document.getElementById('ch_no').value.trim();
-  if(!no) { toast('⚠️ जनगणना मकान संख्या आवश्यक है','warning'); return; }
+  if(!no) { toast('⚠️ मकान संख्या auto-generate नहीं हुई','warning'); return; }
   const b = getBuilding(_currentBuildingId);
   if(!b) return;
   if((b.census_houses||[]).find(ch=>ch.no===no)) { toast('⚠️ यह मकान संख्या पहले से मौजूद है','warning'); return; }
 
   const ch = {
     id: uid(), no,
-    use: document.getElementById('ch_use').value,
     est_hh: parseInt(document.getElementById('ch_est_hh').value)||0,
     createdAt: new Date().toISOString(),
     households: []
@@ -1713,32 +1706,41 @@ function openHHForm(hhid) {
   document.getElementById('hhfCHNo').textContent = 'मकान '+ch.no;
 
   if(hhid) {
+    // Edit existing HH
     const hh = getHousehold(_currentBuildingId, _currentCHId, hhid);
     if(!hh) return;
     document.getElementById('hhfTitle').textContent = 'परिवार '+hh.no;
     document.getElementById('hhFormTitle').innerHTML = '<span class="icon">👨‍👩‍👧‍👦</span> परिवार '+hh.no+' संपादित करें';
     document.getElementById('hh_no').value = hh.no;
-    document.getElementById('hh_parivar_no') && (document.getElementById('hh_parivar_no').value = hh.parivar_no || hh.no);
+    const pno = document.getElementById('hh_parivar_no');
+    if(pno) pno.value = hh.parivar_no || hh.no;
     document.getElementById('deleteHHBtn').style.display = 'inline-flex';
-    // Fill form
     HH_FIELDS.forEach(f => {
       const el = document.getElementById('hh_'+f);
       if(el && hh[f]!==undefined) el.value = hh[f];
     });
-    // Lock fixed fields
     document.getElementById('hh_no').readOnly = true;
   } else {
-    // New HH
-    const nextNo = String((ch.households||[]).length + 1).padStart(2,'0');
+    // New HH — compute HLB-wide counters
+    // Line No = total HH across entire HLB + 1 → 3-digit
+    const allHH = getAllHouseholds();
+    const nextLineNo = String(allHH.length + 1).padStart(3, '0');
+
+    // Parivar No = total SAAMAANYA parivar across HLB + 1 → 3-digit
+    // Sansthagatik always get 999
+    const saamaanyaCount = allHH.filter(h => h.type !== 'संस्थागत').length;
+    const nextParivarNo = String(saamaanyaCount + 1).padStart(3, '0');
+
     document.getElementById('hhfTitle').textContent = 'नया परिवार';
     document.getElementById('hhFormTitle').innerHTML = '<span class="icon">➕</span> नया परिवार जोड़ें';
-    document.getElementById('hh_no').value = nextNo;
+    document.getElementById('hh_no').value = nextLineNo;
     document.getElementById('hh_no').readOnly = true;
-    document.getElementById('hh_parivar_no') && (document.getElementById('hh_parivar_no').value = nextNo);
+    const pno = document.getElementById('hh_parivar_no');
+    if(pno) pno.value = nextParivarNo; // will be overwritten to 999 on save if sansthagatik
     document.getElementById('deleteHHBtn').style.display = 'none';
     HH_FIELDS.forEach(f => {
       const el = document.getElementById('hh_'+f);
-      if(el) el.value='';
+      if(el) el.value = '';
     });
   }
   showInternalPage('hh-form');
@@ -1765,15 +1767,29 @@ function saveHousehold(andNext = false) {
     hh.updatedAt = new Date().toISOString();
     toast('✅ परिवार अपडेट हुआ','success');
   } else {
-    // New HH
-    const hh = { id: uid(), no: document.getElementById('hh_no').value, createdAt: new Date().toISOString() };
+    // New HH — finalize numbering
+    const lineNo = document.getElementById('hh_no').value; // already 3-digit
+    const hhType = document.getElementById('hh_type').value;
+
+    // Parivar No: 999 for sansthagatik, else 3-digit sequential
+    let parivarNo;
+    if(hhType === 'संस्थागत') {
+      parivarNo = '999';
+    } else {
+      const allHH = getAllHouseholds();
+      const saamaanyaCount = allHH.filter(h => h.type !== 'संस्थागत').length;
+      parivarNo = String(saamaanyaCount + 1).padStart(3, '0');
+    }
+
+    const hh = { id: uid(), no: lineNo, parivar_no: parivarNo, createdAt: new Date().toISOString() };
     HH_FIELDS.forEach(f => {
       const el = document.getElementById('hh_'+f);
       if(el) hh[f] = el.value;
     });
+    hh.parivar_no = parivarNo; // ensure correct value
     ch.households.push(hh);
     _currentHHId = hh.id;
-    toast('✅ परिवार '+hh.no+' सहेजा गया','success');
+    toast('✅ लाइन '+lineNo+' · परिवार '+parivarNo+' सहेजा गया','success');
   }
 
   saveToStorage(); autoSync();
