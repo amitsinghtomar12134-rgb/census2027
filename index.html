@@ -437,17 +437,24 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
         <div class="question-block" style="padding:10px 0;" id="ch_q7_block">
           <div class="question-title">7. Ascertain Use of Census House</div>
           <div class="radio-group">
-            <div class="radio-item"><input type="radio" name="ch_q7" value="1" id="ch_q7_1"><label for="ch_q7_1">1-Residence</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="2" id="ch_q7_2"><label for="ch_q7_2">2-Residence-cum-other use</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="3" id="ch_q7_3"><label for="ch_q7_3">3-Shop/office</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="4" id="ch_q7_4"><label for="ch_q7_4">4-School/college etc.</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="5" id="ch_q7_5"><label for="ch_q7_5">5-Hotel/lodge/guest house etc.</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="6" id="ch_q7_6"><label for="ch_q7_6">6-Hospital/dispensary etc</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="7" id="ch_q7_7"><label for="ch_q7_7">7-Factory/workshop/workshed etc.</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="8" id="ch_q7_8"><label for="ch_q7_8">8-Place of worship</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="9" id="ch_q7_9"><label for="ch_q7_9">9-Other non-residential use</label></div>
-            <div class="radio-item"><input type="radio" name="ch_q7" value="0" id="ch_q7_0"><label for="ch_q7_0">0-Vacant</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="1" id="ch_q7_1" onclick="onQ7Change()"><label for="ch_q7_1">1-Residence</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="2" id="ch_q7_2" onclick="onQ7Change()"><label for="ch_q7_2">2-Residence-cum-other use</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="3" id="ch_q7_3" onclick="onQ7Change()"><label for="ch_q7_3">3-Shop/office</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="4" id="ch_q7_4" onclick="onQ7Change()"><label for="ch_q7_4">4-School/college etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="5" id="ch_q7_5" onclick="onQ7Change()"><label for="ch_q7_5">5-Hotel/lodge/guest house etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="6" id="ch_q7_6" onclick="onQ7Change()"><label for="ch_q7_6">6-Hospital/dispensary etc</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="7" id="ch_q7_7" onclick="onQ7Change()"><label for="ch_q7_7">7-Factory/workshop/workshed etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="8" id="ch_q7_8" onclick="onQ7Change()"><label for="ch_q7_8">8-Place of worship</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="9" id="ch_q7_9" onclick="onQ7Change()"><label for="ch_q7_9">9-Other non-residential use</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="0" id="ch_q7_0" onclick="onQ7Change()"><label for="ch_q7_0">0-Vacant</label></div>
           </div>
+        </div>
+
+        <!-- Actual Use Description (shown for Q7=2,3-9) -->
+        <div class="question-block" style="padding:10px 0;display:none;" id="ch_actual_use_block">
+          <div class="question-title">📝 Actual Use Description (वास्तविक उपयोग)</div>
+          <div class="question-hint">मकान का वास्तविक उपयोग लिखें — जैसे: किराना दुकान, आवास सह दुकान, स्कूल आदि</div>
+          <input type="text" class="text-input" id="ch_actual_use_desc" placeholder="जैसे: किराना दुकान, आवास सह दुकान">
         </div>
 
         <!-- Q8 Condition -->
@@ -460,17 +467,19 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
           </div>
         </div>
 
-        <!-- Lock / Institutional -->
+        <!-- Lock / Institutional — controlled by onQ7Change() -->
         <div class="question-block" style="padding:10px 0;" id="ch_locked_block">
           <div class="question-title">क्या यह Census House बंद (Locked) है?</div>
+          <div id="ch_locked_hint" style="font-size:11px;color:var(--muted);margin-bottom:6px;display:none;"></div>
           <div class="radio-group" style="flex-direction:row;gap:16px;">
-            <div class="radio-item"><input type="radio" name="ch_locked" value="no" id="ch_locked_no" checked><label for="ch_locked_no">No</label></div>
+            <div class="radio-item"><input type="radio" name="ch_locked" value="no" id="ch_locked_no" checked><label for="ch_locked_no" id="ch_locked_no_lbl">No</label></div>
             <div class="radio-item"><input type="radio" name="ch_locked" value="yes" id="ch_locked_yes"><label for="ch_locked_yes">🔒 Yes (Locked)</label></div>
           </div>
         </div>
         <div class="question-block" style="padding:10px 0;" id="ch_inst_block">
           <div class="question-title">क्या यह Institutional (संस्थागत) है?</div>
           <div class="question-hint">अगर Yes, तो परिवार क्रमांक auto = 999</div>
+          <div id="ch_inst_hint" style="font-size:11px;color:var(--red);margin-bottom:6px;display:none;"></div>
           <div class="radio-group" style="flex-direction:row;gap:16px;">
             <div class="radio-item"><input type="radio" name="ch_institutional" value="no" id="ch_inst_no" checked><label for="ch_inst_no">No</label></div>
             <div class="radio-item"><input type="radio" name="ch_institutional" value="yes" id="ch_inst_yes"><label for="ch_inst_yes">Yes (Institutional)</label></div>
@@ -1213,9 +1222,25 @@ function clearCHForm() {
   let q3el = document.getElementById('ch_q3_no'); if(q3el) q3el.value = '';
   let msg = document.getElementById('buildingStatusMsg'); if(msg) { msg.style.display='none'; msg.innerText=''; }
   hideBuildingDropdown();
+  // Reset actual use field
+  let actualUseBlock = document.getElementById('ch_actual_use_block');
+  let actualUseInput = document.getElementById('ch_actual_use_desc');
+  if(actualUseBlock) actualUseBlock.style.display = 'none';
+  if(actualUseInput) { actualUseInput.value = ''; actualUseInput.disabled = false; }
+  // Reset locked/inst to default enabled state
+  ['ch_locked_no','ch_locked_yes','ch_inst_no','ch_inst_yes'].forEach(id => {
+    let el = document.getElementById(id); if(el) el.disabled = false;
+  });
+  ['ch_locked_hint','ch_inst_hint'].forEach(id => {
+    let el = document.getElementById(id); if(el) { el.style.display='none'; el.innerText=''; }
+  });
+  let lockedLabels = ['ch_locked_no','ch_locked_yes','ch_inst_no','ch_inst_yes'];
+  lockedLabels.forEach(id => {
+    let lbl = document.querySelector('label[for="'+id+'"]'); if(lbl) lbl.style.color='';
+  });
   // Set defaults
-  document.getElementById('ch_locked_no').checked = true;
-  document.getElementById('ch_inst_no').checked = true;
+  let lockedNoEl = document.getElementById('ch_locked_no'); if(lockedNoEl) lockedNoEl.checked = true;
+  let instNoEl = document.getElementById('ch_inst_no'); if(instNoEl) instNoEl.checked = true;
   // Reset to new CH mode
   chFormMode = 'new';
   selectedExistingCHId = null;
@@ -1385,9 +1410,11 @@ function populateExistingCHDropdown() {
     let opt = document.createElement('option');
     opt.value = ch.id;
     let hhCount = (ch.households||[]).length;
-    let statusTxt = ch.locked ? '🔒 Locked' : (ch.q7==='0' ? '🚪 Vacant' : `${hhCount} HH`);
-    opt.textContent = `CH No: ${ch.ch_no}  |  Q7: ${ch.q7||'—'}  |  ${statusTxt}`;
-    if(ch.locked || ch.q7==='0') { opt.disabled = true; opt.textContent += '  (HH नहीं जोड़ सकते)'; }
+    let q7Labels = {'1':'Residence','2':'Res+Other','3':'Shop','4':'School','5':'Hotel','6':'Hospital','7':'Factory','8':'Worship','9':'Non-resid','0':'Vacant'};
+    let statusTxt = ch.locked ? '🔒 Locked' : (ch.q7==='0' ? '🚪 Vacant' : (!['1','2'].includes(ch.q7)) ? '🏢 Non-Residential' : `${hhCount} HH`);
+    opt.textContent = `CH No: ${ch.ch_no}  |  Q7: ${ch.q7||'—'} (${q7Labels[ch.q7]||'—'})  |  ${statusTxt}`;
+    let canAdd = !ch.locked && (ch.q7 === '1' || ch.q7 === '2');
+    if(!canAdd) { opt.disabled = true; opt.textContent += '  (HH नहीं जोड़ सकते)'; }
     select.appendChild(opt);
   });
 }
@@ -1423,6 +1450,82 @@ function onExistingCHSelect() {
 
 
 
+// ============================================================
+// Q7 CHANGE HANDLER — Rules per Census Book
+// ============================================================
+function onQ7Change() {
+  let q7 = getRadioVal('ch_q7');
+
+  let actualUseBlock = document.getElementById('ch_actual_use_block');
+  let actualUseInput = document.getElementById('ch_actual_use_desc');
+  let lockedNo  = document.getElementById('ch_locked_no');
+  let lockedYes = document.getElementById('ch_locked_yes');
+  let lockedHint = document.getElementById('ch_locked_hint');
+  let instNo    = document.getElementById('ch_inst_no');
+  let instYes   = document.getElementById('ch_inst_yes');
+  let instHint  = document.getElementById('ch_inst_hint');
+
+  // Helper to set disabled state with visual feedback
+  function setDisabled(el, label, disabled, hint, hintEl) {
+    if(!el) return;
+    el.disabled = disabled;
+    if(label) label.style.color = disabled ? '#bbb' : '';
+    if(hintEl) {
+      if(disabled && hint) { hintEl.style.display='block'; hintEl.innerText = hint; }
+      else { hintEl.style.display='none'; hintEl.innerText=''; }
+    }
+  }
+
+  if(q7 === '1') {
+    // Residence → Actual Use: HIDE | Locked: ENABLE | Institutional: DISABLE
+    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) actualUseInput.value=''; }
+    setDisabled(lockedNo,  null, false, '', lockedHint);
+    setDisabled(lockedYes, null, false, '', null);
+    setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  true, '❌ Residence में Institutional नहीं होता', instHint);
+    setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), true, '', null);
+    if(instNo) instNo.checked = true;
+  }
+  else if(q7 === '2') {
+    // Residence-cum-other → Actual Use: SHOW | Locked: ENABLE | Institutional: ENABLE
+    if(actualUseBlock) { actualUseBlock.style.display='block'; if(actualUseInput) actualUseInput.disabled=false; }
+    setDisabled(lockedNo,  null, false, '', lockedHint);
+    setDisabled(lockedYes, null, false, '', null);
+    setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  false, '', instHint);
+    setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), false, '', null);
+  }
+  else if(['3','4','5','6','7','8','9'].includes(q7)) {
+    // Non-residential → Actual Use: SHOW | Locked: DISABLE | Institutional: DISABLE
+    if(actualUseBlock) { actualUseBlock.style.display='block'; if(actualUseInput) actualUseInput.disabled=false; }
+    setDisabled(lockedNo,  document.querySelector('label[for="ch_locked_no"]'),  true, '❌ Non-residential CH Locked नहीं होता', lockedHint);
+    setDisabled(lockedYes, document.querySelector('label[for="ch_locked_yes"]'), true, '', null);
+    setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  true, '❌ Non-residential CH Institutional नहीं होता', instHint);
+    setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), true, '', null);
+    if(lockedNo) lockedNo.checked = true;
+    if(instNo) instNo.checked = true;
+    // Show info banner: no HH will be added
+    toast('ℹ️ Non-residential CH — कोई Household नहीं जोड़ा जाएगा');
+  }
+  else if(q7 === '0') {
+    // Vacant → Actual Use: HIDE | Locked: DISABLE | Institutional: DISABLE
+    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) actualUseInput.value=''; }
+    setDisabled(lockedNo,  document.querySelector('label[for="ch_locked_no"]'),  true, '❌ Vacant CH में Locked नहीं होता', lockedHint);
+    setDisabled(lockedYes, document.querySelector('label[for="ch_locked_yes"]'), true, '', null);
+    setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  true, '❌ Vacant CH Institutional नहीं होता', instHint);
+    setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), true, '', null);
+    if(lockedNo) lockedNo.checked = true;
+    if(instNo) instNo.checked = true;
+    toast('ℹ️ Vacant CH — कोई Household नहीं जोड़ा जाएगा');
+  }
+  else {
+    // No selection — reset all to enabled
+    if(actualUseBlock) actualUseBlock.style.display='none';
+    setDisabled(lockedNo,  null, false, '', lockedHint);
+    setDisabled(lockedYes, null, false, '', null);
+    setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  false, '', instHint);
+    setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), false, '', null);
+  }
+}
+
 function saveCHAndGotoHH() {
 
   // ── EXISTING CH MODE ─────────────────────────────────────
@@ -1433,6 +1536,7 @@ function saveCHAndGotoHH() {
     let ch = found.ch;
     if(ch.locked) { toast('🔒 Locked CH में HH add नहीं हो सकता'); return; }
     if(ch.q7==='0') { toast('❌ Vacant CH में HH add नहीं हो सकता'); return; }
+    if(!['1','2'].includes(ch.q7)) { toast('❌ Non-residential CH में HH add नहीं होता'); return; }
 
     currentCHId = selectedExistingCHId;
     currentBuildingId = found.building.id;
@@ -1466,8 +1570,8 @@ function saveCHAndGotoHH() {
 
   let locked = document.querySelector('input[name="ch_locked"]:checked')?.value === 'yes';
   let institutional = document.querySelector('input[name="ch_institutional"]:checked')?.value === 'yes';
-
   let q4 = getRadioVal('ch_q4'), q5 = getRadioVal('ch_q5'), q6 = getRadioVal('ch_q6');
+  let actual_use_desc = (document.getElementById('ch_actual_use_desc')?.value || '').trim();
 
   tempCHData = {
     building_no: buildingInput,
@@ -1476,11 +1580,27 @@ function saveCHAndGotoHH() {
     q7, q8: getRadioVal('ch_q8'),
     locked,
     institutional,
+    actual_use_desc,
     households: []
   };
 
+  // ── NON-RESIDENTIAL (Q7 = 3–9) or VACANT (Q7 = 0): No HH ──
+  if(!['1','2'].includes(q7)) {
+    let chId = 'ch_' + Date.now().toString(36);
+    let ch = { id: chId, ...tempCHData };
+    saveNewCHToBuilding(ch, buildingInput);
+    appData.nextCHNo++;
+    save();
+    let isVacant = (q7 === '0');
+    toast(isVacant ? '🚪 Vacant CH saved' : '🏢 Non-residential CH saved — No HH added');
+    _lastSavedCHId = chId;
+    _lastSavedBuildingNo = buildingInput;
+    showNextActionPage(chId, buildingInput, isVacant, false);
+    return;
+  }
+
+  // ── LOCKED (Q7=1 or 2 + Locked=yes): No HH ──
   if(locked) {
-    // Locked: save CH with no households, go to next action
     let chId = 'ch_' + Date.now().toString(36);
     let ch = { id: chId, ...tempCHData };
     saveNewCHToBuilding(ch, tempCHData.building_no);
@@ -1489,12 +1609,11 @@ function saveCHAndGotoHH() {
     toast('🔒 Locked CH saved (no HH added)');
     _lastSavedCHId = chId;
     _lastSavedBuildingNo = tempCHData.building_no;
-    // For locked CH: disable "same CH" option on next action page
     showNextActionPage(chId, tempCHData.building_no, false, true);
     return;
   }
 
-  // Not locked — go to HH form
+  // ── RESIDENCE / RESIDENCE-CUM-OTHER (Q7=1 or 2, not locked) → HH form ──
   setupHHForm(null, tempCHData);
   showPage('pageHLOForm');
 }
@@ -1822,6 +1941,7 @@ function promptAddHHToCH(chId) {
   let ch = found.ch;
   if(ch.locked) { toast('🔒 Locked CH में HH add नहीं हो सकता'); return; }
   if(ch.q7 === '0') { toast('❌ Vacant CH में HH add नहीं हो सकता'); return; }
+  if(!['1','2'].includes(ch.q7)) { toast('❌ Non-residential CH (Q7='+ch.q7+') में HH add नहीं होता'); return; }
   currentCHId = chId;
   currentBuildingId = found.building.id;
   tempCHData = null;
@@ -1895,11 +2015,21 @@ function renderHierarchyTree() {
       </div>
       <div id="btree_${b.id}">`;
     (b.census_houses||[]).forEach(ch => {
-      let badge = ch.locked ? '<span class="ch-badge badge-locked">🔒 Locked</span>' : ch.institutional ? '<span class="ch-badge badge-inst">Institutional</span>' : '<span class="ch-badge badge-normal">Normal</span>';
-      let canAddHH = !ch.locked && ch.q7 !== '0';
+      let q7Labels = {'1':'Residence','2':'Res+Other','3':'Shop','4':'School','5':'Hotel','6':'Hospital','7':'Factory','8':'Worship','9':'Non-resid','0':'Vacant'};
+      let badge = ch.locked ? '<span class="ch-badge badge-locked">🔒 Locked</span>'
+        : ch.institutional ? '<span class="ch-badge badge-inst">🏛 Institutional</span>'
+        : (ch.q7 === '0') ? '<span class="ch-badge" style="background:#999;color:white;">🚪 Vacant</span>'
+        : (!['1','2'].includes(ch.q7)) ? '<span class="ch-badge" style="background:#e67e22;color:white;">🏢 Non-Res</span>'
+        : '<span class="ch-badge badge-normal">✅ Normal</span>';
+
+      // canAddHH: only Q7=1 (Residence) or Q7=2 (Res-cum-other), and not locked
+      let canAddHH = !ch.locked && (ch.q7 === '1' || ch.q7 === '2');
+      let noHHReason = ch.locked ? '🔒 Locked' : (ch.q7==='0') ? '🚪 Vacant' : (!['1','2'].includes(ch.q7)) ? '🏢 Non-residential' : '';
       let addHHBtn = canAddHH
         ? `<button class="btn btn-outline btn-sm" onclick="promptAddHHToCH('${ch.id}')">+HH</button>`
-        : (ch.q7==='0' ? '<span style="font-size:10px;color:var(--muted);padding:4px 6px;border:1px dashed #ccc;border-radius:8px;">Vacant</span>' : '');
+        : `<span style="font-size:10px;color:var(--muted);padding:4px 6px;border:1px dashed #ccc;border-radius:8px;">${noHHReason}</span>`;
+
+      let actualUseInfo = ch.actual_use_desc ? `<span style="color:var(--accent);font-weight:600;">| ${ch.actual_use_desc}</span>` : '';
       html += `<div class="ch-item">
         <div class="ch-header">
           <h5>🏠 CH No: ${ch.ch_no} ${badge}</h5>
@@ -1908,7 +2038,7 @@ function renderHierarchyTree() {
             <button class="btn btn-red btn-sm" onclick="deleteCH('${ch.id}')">🗑</button>
           </div>
         </div>
-        <div style="font-size:10px;color:var(--muted);padding:4px 12px;">Q7:${ch.q7||'—'} Q8:${ch.q8||'—'} | Floor:${ch.q4||'—'} Wall:${ch.q5||'—'} Roof:${ch.q6||'—'}</div>`;
+        <div style="font-size:10px;color:var(--muted);padding:4px 12px;">Q7:${ch.q7||'—'} (${q7Labels[ch.q7]||'—'}) ${actualUseInfo} | Q8:${ch.q8||'—'} | Floor:${ch.q4||'—'} Wall:${ch.q5||'—'} Roof:${ch.q6||'—'}</div>`;
       if(ch.households && ch.households.length) {
         ch.households.forEach((hh,idx) => {
           html += `<div class="hh-row">
@@ -2083,7 +2213,7 @@ function exportExcel() {
   // Main header row
   rows.push([
     'Building No', 'CH No', 'HH No', 'Line No', 'Type',
-    'Q4-Floor', 'Q5-Wall', 'Q6-Roof', 'Q7-Use', 'Q8-Condition',
+    'Q4-Floor', 'Q5-Wall', 'Q6-Roof', 'Q7-Use', 'Actual Use Desc', 'Q8-Condition',
     'CH Status', 'Head Name', 'Sex', 'SC/ST/Other', 'Total Members',
     'Ownership', 'Rooms', 'Couples', 'Water Source', 'Water Availability',
     'Lighting', 'Latrine Access', 'Latrine Type', 'Waste Water', 'Bathing',
@@ -2100,7 +2230,7 @@ function exportExcel() {
         // Locked/Vacant CH with no HH — still show one row
         rows.push([
           building.building_no, ch.ch_no, '—', '—', chStatus,
-          lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), lbl(q8L,ch.q8),
+          lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), ch.actual_use_desc||'—', lbl(q8L,ch.q8),
           chStatus, '—','—','—','—','—','—','—','—','—',
           '—','—','—','—','—','—','—','—','—','—',
           '—','—','—','—','—','—','—',chStatus,'—'
@@ -2113,7 +2243,7 @@ function exportExcel() {
       sortedHHs.forEach(hh => {
         rows.push([
           building.building_no, ch.ch_no, hh.family_no, hh.line_no, chStatus,
-          lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), lbl(q8L,ch.q8),
+          lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), ch.actual_use_desc||'—', lbl(q8L,ch.q8),
           chStatus,
           hh.q11_name||'—', lbl(q12L,hh.q12), lbl(q13L,hh.q13), hh.q10_members||'—',
           lbl(q14L,hh.q14), hh.q15_rooms||'—', hh.q16_couples||'—',
