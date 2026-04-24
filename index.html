@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>जनगणना 2027 - प्रगणक ऐप (पूर्ण संस्करण)</title>
+<title>जनगणना 2027 - HLO Data App</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getFirestore, collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -23,511 +22,1422 @@
     window._fbDB = db; window._fbSetDoc = setDoc; window._fbDoc = doc;
     window._fbCollection = collection; window._fbGetDocs = getDocs;
     window._fbReady = true;
-    console.log("✅ Firebase ready");
-  } catch(e) {
-    window._fbReady = false;
-    console.warn("⚠️ Firebase not configured");
-  }
+  } catch(e) { window._fbReady = false; }
 </script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #1e3c72;
+  --blue2: #2a5298;
+  --accent: #f5a623;
+  --red: #e53e3e;
+  --green: #27ae60;
+  --pink-bg: #f0f0fa;
+  --white: #fff;
+  --text: #1a2a3a;
+  --muted: #7f8c8d;
+  --border: #dde1e9;
+}
 body {
   font-family: 'Noto Sans Devanagari', sans-serif;
-  background: #f0f2f5;
-  padding: 12px;
-  color: #1a2a3a;
+  background: #e8eaf0;
+  color: var(--text);
+  min-height: 100vh;
 }
-.container { max-width: 550px; margin: 0 auto; }
-.header {
-  background: linear-gradient(135deg, #1e3c72, #2a5298);
+/* ---- TOP HEADER ---- */
+.app-header {
+  background: var(--blue);
   color: white;
-  padding: 14px 16px;
-  border-radius: 16px;
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 10px;
 }
-.header h1 { font-size: 18px; }
-.header p { font-size: 11px; opacity: 0.8; }
-.card {
-  background: white;
-  border-radius: 14px;
-  margin-bottom: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+.app-header .back-btn {
+  background: none; border: none; color: white;
+  font-size: 18px; cursor: pointer; padding: 6px; flex-shrink: 0;
 }
-.card-header {
-  padding: 10px 14px;
-  background: #f8f9fc;
-  border-bottom: 1px solid #e9ecef;
+.app-header h2 { font-size: 16px; font-weight: 600; flex: 1; }
+.app-header .home-btn {
+  background: none; border: none; color: white;
+  font-size: 20px; cursor: pointer; padding: 6px;
+}
+/* ---- CONFIDENTIAL BANNER ---- */
+.confidential-bar {
+  background: #fff5f5;
+  text-align: center;
+  padding: 4px;
+  font-size: 11px;
+  color: #e53e3e;
   font-weight: 600;
-  font-size: 13px;
+  border-bottom: 1px solid #fde0e0;
+}
+.line-ch-bar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  padding: 4px 14px;
+  font-size: 11px;
+  color: #555;
+  background: #f8f9fc;
+  border-bottom: 1px solid var(--border);
 }
-.card-body { padding: 12px 14px; }
-.form-group { margin-bottom: 12px; }
-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #2c3e50;
-  display: block;
-  margin-bottom: 4px;
-}
-label .qno {
-  background: #e67e22;
-  color: white;
-  font-size: 9px;
-  padding: 2px 6px;
+/* ---- MAIN CONTENT ---- */
+.page { display: none; }
+.page.active { display: block; }
+.content { padding: 12px; max-width: 560px; margin: 0 auto; }
+
+/* ---- CARD ---- */
+.card {
+  background: white;
   border-radius: 12px;
-  margin-right: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  margin-bottom: 10px;
 }
-label .fixed { background: #27ae60; }
-input, select, textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1.5px solid #ddd;
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: inherit;
-}
-input:focus, select:focus { outline: none; border-color: #e67e22; }
-input[readonly] { background: #f4f6f9; color: #555; font-weight: 600; }
-.btn {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 30px;
+.card-section-label {
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 16px;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn-primary { background: #e67e22; color: white; }
-.btn-primary:hover { background: #d35400; }
-.btn-secondary { background: #2c3e50; color: white; }
-.btn-success { background: #27ae60; color: white; }
-.btn-danger { background: #c0392b; color: white; }
-.btn-outline { background: white; border: 2px solid #e67e22; color: #e67e22; }
-.btn-sm { padding: 6px 12px; font-size: 11px; }
-.btn-group { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-.level-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  cursor: pointer;
-}
-.level-card:hover { border-color: #e67e22; background: #fffaf5; }
-.level-card .title { font-weight: 600; font-size: 14px; }
-.level-card .sub { font-size: 11px; color: #7f8c8d; margin-top: 3px; }
-.badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 9px;
-  font-weight: 600;
+  margin: 14px auto 10px;
+  text-align: center;
+  display: block;
+  width: fit-content;
+  margin-left: auto; margin-right: auto;
 }
-.badge-green { background: #d4edda; color: #155724; }
-.badge-orange { background: #fff3cd; color: #856404; }
-.badge-red { background: #f8d7da; color: #721c24; }
-.badge-blue { background: #d1ecf1; color: #0c5460; }
-.hierarchy {
-  background: #e8f4f8;
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  font-size: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* ---- QUESTION ---- */
+.question-block { padding: 14px 16px; border-bottom: 1px solid #f0f0f5; }
+.question-block:last-child { border-bottom: none; }
+.question-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.question-hint { font-size: 10px; color: var(--muted); margin-bottom: 8px; font-style: italic; }
+/* Radio group */
+.radio-group { display: flex; flex-direction: column; gap: 6px; }
+.radio-sub-label { font-size: 11px; font-weight: 700; color: #444; margin: 6px 0 2px; }
+.radio-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.radio-item input[type="radio"] {
+  width: 18px; height: 18px; accent-color: var(--blue2); flex-shrink: 0; cursor: pointer;
 }
-.hierarchy .current { font-weight: 700; color: #e67e22; }
-.progress-bar { height: 6px; background: #e9ecef; border-radius: 10px; overflow: hidden; margin: 8px 0; }
-.progress-fill { height: 100%; background: #27ae60; width: 0%; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.mt-2 { margin-top: 8px; }
-.text-muted { color: #7f8c8d; font-size: 11px; }
-.text-center { text-align: center; }
-.modal {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
+.radio-item label { font-size: 13px; cursor: pointer; }
+/* Text input */
+.text-input {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 14px; font-family: inherit; margin-top: 4px;
+}
+.text-input:focus { outline: none; border-color: var(--blue2); }
+.text-input[readonly] { background: #f4f6f9; color: #555; font-weight: 700; }
+/* ---- BOTTOM NAV ---- */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; padding: 8px 16px;
+  display: flex; gap: 10px; justify-content: flex-end;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+  max-width: 560px; margin: 0 auto;
+}
+.bottom-nav-inner {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; gap: 10px; justify-content: center;
+  padding: 10px 16px;
+  background: white;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
+  z-index: 50;
+}
+.page-content-padded { padding-bottom: 70px; }
+/* ---- BUTTONS ---- */
+.btn {
+  padding: 10px 20px; border: none; border-radius: 30px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: opacity 0.2s;
+}
+.btn:active { opacity: 0.8; }
+.btn-blue { background: var(--blue2); color: white; }
+.btn-outline { background: white; border: 2px solid var(--blue2); color: var(--blue2); }
+.btn-primary { background: var(--accent); color: white; }
+.btn-green { background: var(--green); color: white; }
+.btn-red { background: var(--red); color: white; }
+.btn-gray { background: #6c757d; color: white; }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+.btn-icon { background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px; }
+
+/* ---- HOME PAGE ---- */
+.home-header {
+  background: var(--blue);
+  color: white;
   padding: 16px;
 }
-.modal.show { display: flex; }
-.modal-content {
-  background: white;
+.home-header h1 { font-size: 20px; font-weight: 700; }
+.home-header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.home-info { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; }
+.hlb-box {
+  background: var(--white);
+  border: 2px solid var(--border);
   border-radius: 20px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
+  padding: 8px 20px;
+  font-size: 14px; font-weight: 700;
+  text-align: center; display: block;
+  margin: 14px auto; max-width: 260px;
 }
-.modal-header {
-  padding: 14px 16px;
-  background: #1e3c72;
-  color: white;
-  border-radius: 20px 20px 0 0;
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.op-card {
+  background: white; border-radius: 12px;
+  padding: 20px 10px; text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer; transition: all 0.2s;
+  border: 2px solid transparent;
 }
-.modal-footer {
-  padding: 12px 16px;
-  border-top: 1px solid #e9ecef;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+.op-card:active { border-color: var(--blue2); background: #f0f4ff; }
+.op-card .icon { font-size: 32px; margin-bottom: 6px; }
+.op-card .title { font-size: 13px; font-weight: 700; color: var(--text); }
+/* ---- SUMMARY / LIST ---- */
+.summary-box {
+  background: white; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
 }
+.summary-stats { display: grid; grid-columns: 1fr 1fr; gap: 8px; text-align: center; }
+.stat-row { display: flex; justify-content: space-around; margin-bottom: 6px; }
+.stat-item .val { font-size: 22px; font-weight: 700; color: var(--blue2); }
+.stat-item .label { font-size: 10px; color: var(--muted); }
+.status-row { display: flex; justify-content: space-around; font-size: 11px; font-weight: 700; }
+.status-complete { color: var(--green); }
+.status-incomplete { color: var(--red); }
+.status-synced { color: var(--blue2); }
+.status-locked { color: #555; }
+.status-deleted { color: var(--red); }
+.hh-item {
+  background: white; border-radius: 10px; padding: 12px 14px;
+  margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+.hh-item .hh-line { font-size: 11px; color: var(--blue2); font-weight: 600; margin-bottom: 4px; }
+.hh-item .hh-detail { font-size: 13px; font-weight: 600; }
+.hh-item .hh-sub { font-size: 11px; color: var(--muted); }
+.hh-item .hh-status { font-size: 11px; font-weight: 700; }
+.badge-complete { color: var(--green); }
+.badge-pending { color: var(--accent); }
+.view-btn { background: none; border: none; font-size: 20px; cursor: pointer; float: right; }
+/* ---- ANSWERS REVIEW ---- */
+.review-item {
+  background: white; border-radius: 8px; padding: 10px 14px;
+  margin-bottom: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.review-item .q-label { font-size: 12px; color: var(--text); margin-bottom: 2px; }
+.review-item .q-answer { font-size: 13px; color: var(--blue2); font-weight: 600; }
+/* ---- SIGNATURE ---- */
+.sig-box {
+  background: white; border-radius: 12px; padding: 20px;
+  text-align: center; margin: 0 0 12px;
+}
+.sig-confirm-text {
+  background: var(--blue2); color: white; font-size: 18px;
+  font-weight: 700; padding: 8px 0; border-radius: 12px 12px 0 0;
+  margin: -20px -20px 16px;
+}
+canvas#sigCanvas {
+  border: 1.5px solid var(--border); border-radius: 8px;
+  display: block; margin: 0 auto; cursor: crosshair;
+  background: #f9f9fc;
+}
+.checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; text-align: left; }
+.checkbox-row input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--blue2); }
+.checkbox-row label { font-size: 12px; color: var(--text); }
+/* ---- MODAL / POPUP ---- */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 200;
+  justify-content: center; align-items: center; padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: white; border-radius: 16px; padding: 20px;
+  max-width: 320px; width: 100%;
+}
+.modal-box h3 { font-size: 15px; margin-bottom: 8px; }
+.modal-box p { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-btns button { padding: 8px 18px; border: none; border-radius: 20px; font-size: 13px; cursor: pointer; font-family: inherit; font-weight: 600; }
+.modal-btn-no { background: #eee; color: #333; }
+.modal-btn-yes { background: var(--blue2); color: white; }
+/* ---- JUMP MODAL ---- */
+.select-input {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 14px; font-family: inherit;
+}
+/* ---- SETTINGS ---- */
+.section-heading { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 14px 16px 4px; }
+.form-group { padding: 0 16px 12px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; display: block; }
+/* ---- TOAST ---- */
 .toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
+  position: fixed; bottom: 80px; left: 50%;
   transform: translateX(-50%);
-  background: #2c3e50;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 40px;
-  font-size: 12px;
-  z-index: 2000;
-  animation: fadein 0.3s;
+  background: rgba(30,60,114,0.92); color: white;
+  padding: 10px 20px; border-radius: 40px; font-size: 12px;
+  z-index: 300; white-space: nowrap;
+  animation: toastIn 0.3s ease;
 }
-@keyframes fadein {
-  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+/* ---- ANALYSIS TABLE ---- */
+.analysis-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.analysis-table th { background: var(--blue); color: white; padding: 6px 4px; text-align: left; }
+.analysis-table td { padding: 5px 4px; border-bottom: 1px solid #f0f0f5; }
+.analysis-table tr:nth-child(even) td { background: #f8f9fc; }
+/* ---- UTILITY ---- */
+.text-muted { color: var(--muted); font-size: 12px; }
+.text-center { text-align: center; }
+.mt-2 { margin-top: 8px; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.empty-msg { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
 </style>
 </head>
 <body>
-<div class="container">
 
-<!-- Header -->
-<div class="header">
-  <h1>🇮🇳 जनगणना 2027</h1>
-  <p>प्रगणक ऐप — मकान सूचीकरण एवं मकानों की गणना</p>
-  <div class="flex-between mt-2">
-    <span>👤 <span id="enumeratorName">—</span></span>
-    <span>📍 HLB: <span id="hlbNumber">—</span></span>
-  </div>
-</div>
-
-<!-- Hierarchy -->
-<div class="hierarchy" id="hierarchyBar">
-  <span>🏛️ <span id="hierBuilding">—</span></span>
-  <span>›</span>
-  <span>🏠 <span id="hierCH">—</span></span>
-  <span>›</span>
-  <span class="current" id="hierHH">—</span>
-</div>
-
-<!-- Stats Card -->
-<div class="card">
-  <div class="card-header">📊 प्रगति सारांश</div>
-  <div class="card-body">
-    <div class="flex-between">
-      <span>🏛️ भवन: <strong id="statBuildings">0</strong></span>
-      <span>🏠 मकान: <strong id="statCH">0</strong></span>
-      <span>👨‍👩‍👧‍👦 परिवार: <strong id="statHH">0</strong></span>
-    </div>
-    <div class="progress-bar mt-2"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="flex-between text-muted mt-2">
-      <span>✅ पूर्ण: <span id="completedHH">0</span></span>
-      <span>🎯 लक्ष्य: <span id="targetHH">—</span></span>
+<!-- ==================== PAGE: HOME ==================== -->
+<div id="pageHome" class="page active">
+  <div class="home-header">
+    <h1>🇮🇳 जनगणना 2027</h1>
+    <p>Houselisting & Housing Census — HLO App</p>
+    <div class="home-info">
+      <span>👤 <span id="cfgNameDisplay">—</span></span>
+      <span>📍 Block: <span id="cfgHLBDisplay">—</span></span>
     </div>
   </div>
-</div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div class="hlb-box">Houselisting Block No: <span id="hlbDisplay2">—</span></div>
 
-<!-- ========== NAV TABS ========== -->
-<div class="btn-group" style="margin-bottom: 8px;">
-  <button class="btn btn-outline btn-sm" onclick="showView('buildings')">🏛️ भवन</button>
-  <button class="btn btn-outline btn-sm" onclick="showView('analysis')">📊 विश्लेषण</button>
-  <button class="btn btn-outline btn-sm" onclick="showView('settings')">⚙️ सेटिंग्स</button>
-</div>
-
-<!-- ========== VIEW: BUILDINGS ========== -->
-<div id="viewBuildings">
-  <div class="card">
-    <div class="card-header">
-      <span>🏛️ भवन सूची</span>
-      <button class="btn btn-primary btn-sm" onclick="showBuildingForm()">+ नया</button>
+    <!-- Summary Stats -->
+    <div class="summary-box">
+      <div class="stat-row">
+        <div class="stat-item"><div class="val" id="homeTotalCH">0</div><div class="label">Total Census Houses</div></div>
+        <div class="stat-item"><div class="val" id="homeNonResid">0</div><div class="label">Non-residential</div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-item"><div class="val" id="homeTotalHH">0</div><div class="label">Total Households</div></div>
+        <div class="stat-item"><div class="val" id="homeInstitutional">0</div><div class="label">Institutional HH</div></div>
+      </div>
+      <div class="status-row">
+        <span class="status-complete">✔ Complete: <span id="homeComplete">0</span></span>
+        <span class="status-incomplete">✖ Incomplete: <span id="homeIncomplete">0</span></span>
+        <span class="status-synced">↑ Synced: <span id="homeSynced">0</span></span>
+        <span class="status-locked">🔒 Locked: <span id="homeLocked">0</span></span>
+      </div>
     </div>
-    <div class="card-body" id="buildingList"></div>
-  </div>
-</div>
 
-<!-- ========== VIEW: CH LIST (Inside Building) ========== -->
-<div id="viewCH" style="display:none;">
-  <div class="card">
-    <div class="card-header">
-      <span>🏠 जनगणना मकान</span>
-      <button class="btn btn-outline btn-sm" onclick="backToBuildings()">← वापस</button>
+    <!-- 6 Operation Cards -->
+    <div class="grid-2">
+      <div class="op-card" onclick="gotoNewEntry()">
+        <div class="icon">📝</div>
+        <div class="title">NEW HOUSELIST ENTRY</div>
+      </div>
+      <div class="op-card" onclick="gotoUpdation()">
+        <div class="icon">⏳</div>
+        <div class="title">UPDATION DATA</div>
+      </div>
+      <div class="op-card" onclick="gotoUpdation()">
+        <div class="icon">✏️</div>
+        <div class="title">EDIT ALREADY SYNCED DATA</div>
+      </div>
+      <div class="op-card" onclick="gotoViewSummary()">
+        <div class="icon">👁️</div>
+        <div class="title">VIEW SUMMARY</div>
+      </div>
+      <div class="op-card" onclick="doSync()">
+        <div class="icon">⬆️</div>
+        <div class="title">SYNC</div>
+      </div>
+      <div class="op-card" onclick="markComplete()">
+        <div class="icon">✅</div>
+        <div class="title">MARK AS COMPLETE</div>
+      </div>
     </div>
-    <div class="card-body" id="chList"></div>
-  </div>
-  <div class="btn-group"><button class="btn btn-primary" onclick="showCHForm()">+ नया मकान</button></div>
-</div>
 
-<!-- ========== VIEW: HH LIST (Inside CH) ========== -->
-<div id="viewHH" style="display:none;">
-  <div class="card">
-    <div class="card-header">
-      <span>👨‍👩‍👧‍👦 परिवार सूची</span>
-      <button class="btn btn-outline btn-sm" onclick="backToCH()">← वापस</button>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="showPage('pageSettings')">⚙️ Settings</button>
+      <button class="btn btn-outline btn-sm" onclick="showPage('pageAnalysis')">📊 Analysis</button>
+      <button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">📄 CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="exportJSON()">💾 Backup</button>
+      <label class="btn btn-outline btn-sm" style="cursor:pointer;">📂 Restore<input type="file" accept=".json" style="display:none;" onchange="importJSON(this)"></label>
     </div>
-    <div class="card-body" id="hhList"></div>
-  </div>
-  <div class="btn-group"><button class="btn btn-primary" onclick="showHHForm()">+ परिवार</button></div>
-</div>
 
-<!-- ========== FORM: BUILDING ========== -->
-<div id="formBuilding" style="display:none;">
-  <div class="card">
-    <div class="card-header"><span>🏛️ नया भवन (स्थिर)</span><button class="btn btn-outline btn-sm" onclick="cancelBuildingForm()">✕</button></div>
-    <div class="card-body">
-      <div class="form-group"><label><span class="qno">प्र.2</span> भवन नम्बर</label><input type="text" id="bld_no" placeholder="जैसे: 1, A-12, 10/1"></div>
-      <div class="form-group"><label><span class="qno fixed">प्र.4</span> फर्श की सामग्री</label><select id="bld_floor"><option value="">--</option><option value="1">1-मिट्टी</option><option value="2">2-लकड़ी/बाँस</option><option value="3">3-पक्की ईंट</option><option value="4">4-पत्थर</option><option value="5">5-सीमेंट</option><option value="6">6-मोजेक/टाइल्स</option><option value="7">7-अन्य</option></select></div>
-      <div class="form-group"><label><span class="qno fixed">प्र.5</span> दीवार की सामग्री</label><select id="bld_wall"><option value="">--</option><option value="1">1-घास/फूस/बाँस</option><option value="2">2-प्लास्टिक/पॉलीथीन</option><option value="3">3-मिट्टी/कच्ची ईंट</option><option value="4">4-लकड़ी</option><option value="5">5-पत्थर(गारा बिना)</option><option value="6">6-पत्थर(गारा सहित)</option><option value="7">7-जी.आई./धातु</option><option value="8">8-पक्की ईंट</option><option value="9">9-कंक्रीट</option><option value="0">0-अन्य</option></select></div>
-      <div class="form-group"><label><span class="qno fixed">प्र.6</span> छत की सामग्री</label><select id="bld_roof"><option value="">--</option><option value="1">1-घास/फूस/बाँस</option><option value="2">2-प्लास्टिक/पॉलीथीन</option><option value="3">3-हस्तनिर्मित टाइल्स</option><option value="4">4-मशीन निर्मित टाइल्स</option><option value="5">5-पक्की ईंट</option><option value="6">6-पत्थर</option><option value="7">7-स्लेट</option><option value="8">8-जी.आई./धातु</option><option value="9">9-कंक्रीट</option><option value="0">0-अन्य</option></select></div>
-      <div class="btn-group"><button class="btn btn-secondary" onclick="cancelBuildingForm()">रद्द</button><button class="btn btn-primary" onclick="saveBuilding()">✅ सहेजें</button></div>
+    <div style="margin-top:12px;font-size:10px;color:var(--muted);text-align:center;">
+      Designed for Census 2027 Field Duty — Amit Sir App
     </div>
   </div>
 </div>
 
-<!-- ========== FORM: CENSUS HOUSE ========== -->
-<div id="formCH" style="display:none;">
-  <div class="card">
-    <div class="card-header"><span>🏠 जनगणना मकान</span><button class="btn btn-outline btn-sm" onclick="cancelCHForm()">✕</button></div>
-    <div class="card-body">
-      <div class="form-group"><label><span class="qno fixed">प्र.3</span> मकान नंबर (Auto 4-अंक)</label><input type="text" id="ch_number" readonly style="font-weight:700;font-size:16px;"></div>
-      <div class="form-group"><label><span class="qno">प्र.7</span> मकान का उपयोग</label><select id="ch_use" onchange="toggleUseDesc()"><option value="">--</option><option value="1">1-आवास</option><option value="2">2-आवास-सह-अन्य</option><option value="3">3-दुकान/कार्यालय</option><option value="4">4-स्कूल/कॉलेज</option><option value="5">5-होटल/लॉज</option><option value="6">6-अस्पताल</option><option value="7">7-फैक्ट्री/वर्कशॉप</option><option value="8">8-पूजा स्थल</option><option value="9">9-अन्य गैर-आवासीय</option><option value="0">0-खाली</option></select></div>
-      <div class="form-group" id="useDescGroup" style="display:none;"><label>उपयोग विवरण</label><input type="text" id="ch_use_desc" placeholder="जैसे: आवास सह दुकान"></div>
-      <div class="form-group"><label><span class="qno">प्र.8</span> मकान की स्थिति</label><select id="ch_condition"><option value="">--</option><option value="1">1-अच्छी</option><option value="2">2-रहने योग्य</option><option value="3">3-जीर्ण-शीर्ण</option></select></div>
-      <div class="form-group"><label>🔒 लॉक है (बंद मकान)</label><select id="ch_locked"><option value="no">नहीं</option><option value="yes">हाँ-बंद (कोई परिवार नहीं)</option></select></div>
-      <div class="form-group"><label>🏢 संस्थागत है</label><select id="ch_institutional"><option value="no">नहीं-सामान्य</option><option value="yes">हाँ-संस्थागत (Family No=999)</option></select></div>
-      <div class="btn-group"><button class="btn btn-secondary" onclick="cancelCHForm()">रद्द</button><button class="btn btn-primary" onclick="saveCensusHouse()">✅ सहेजें</button></div>
+<!-- ==================== PAGE: UPDATION LIST ==================== -->
+<div id="pageUpdation" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageHome')">←</button>
+    <h2>HLO Training App</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div style="font-size:14px;font-weight:700;text-align:center;padding:8px;">UPDATION DATA</div>
+    <div id="updationList">
+      <div class="empty-msg">कोई रिकॉर्ड नहीं</div>
     </div>
+  </div>
+  <div class="bottom-nav-inner">
+    <button class="btn btn-blue" onclick="gotoNewEntry()">+ नई प्रविष्टि</button>
   </div>
 </div>
 
-<!-- ========== FORM: HOUSEHOLD (FULL Q1-Q34) ========== -->
-<div id="formHH" style="display:none;">
-  <div class="card">
-    <div class="card-header"><span>👨‍👩‍👧‍👦 परिवार विवरण</span><button class="btn btn-outline btn-sm" onclick="cancelHHForm()">✕</button></div>
-    <div class="card-body">
-      <!-- Auto fields -->
-      <div class="form-group"><label><span class="qno fixed">प्र.1</span> लाइन क्रमांक (Auto 3-अंक)</label><input type="text" id="hh_line_no" readonly></div>
-      <div class="form-group"><label><span class="qno fixed">प्र.9</span> परिवार क्रमांक (Auto)</label><input type="text" id="hh_family_no" readonly></div>
-      <div class="form-group"><label>🔑 SE ID (स्व-गणना)</label><input type="text" id="hh_se_id" placeholder="16-digit SE ID"></div>
-      
-      <!-- Q10-Q16 -->
-      <div class="form-group"><label><span class="qno">प्र.10</span> कुल सदस्य संख्या</label><input type="number" id="hh_members" min="0"></div>
-      <div class="form-group"><label><span class="qno">प्र.11</span> मुखिया का नाम</label><input type="text" id="hh_head_name"></div>
-      <div class="form-group"><label><span class="qno">प्र.12</span> लिंग</label><select id="hh_gender"><option value="">--</option><option value="1">1-पुरुष</option><option value="2">2-स्त्री</option><option value="3">3-ट्रांसजेंडर</option></select></div>
-      <div class="form-group"><label><span class="qno">प्र.13</span> SC/ST/अन्य</label><select id="hh_caste"><option value="">--</option><option value="1">1-अनुसूचित जाति(SC)</option><option value="2">2-अनुसूचित जनजाति(ST)</option><option value="3">3-अन्य</option></select></div>
-      <div class="form-group"><label><span class="qno">प्र.14</span> मकान के स्वामित्व की स्थिति</label><select id="hh_ownership"><option value="">--</option><option value="1">1-अपना</option><option value="2">2-किराये पर, परंतु अन्यत्र अपना</option><option value="3">3-किराये का, अपना कोई नहीं</option><option value="4">4-अन्य</option></select></div>
-      <div class="form-group"><label><span class="qno">प्र.15</span> उपलब्ध कमरों की संख्या</label><input type="number" id="hh_rooms" min="0"></div>
-      <div class="form-group"><label><span class="qno">प्र.16</span> विवाहित दंपति(यों) की संख्या</label><input type="number" id="hh_couples" min="0"></div>
-      
-      <!-- Q17-Q18 Water -->
-      <div class="form-group"><label><span class="qno">प्र.17</span> पेयजल का मुख्य स्रोत</label><select id="hh_water"><option value="">--</option><option value="1">1-नल(उपचारित)</option><option value="2">2-नल(अन-उपचारित)</option><option value="3">3-कुआँ</option><option value="4">4-हैंडपंप</option><option value="5">5-ट्यूबवेल/बोरहोल</option><option value="6">6-झरना</option><option value="7">7-नदी/नहर</option><option value="8">8-टैंक/तालाब/झील</option><option value="9">9-सीलबंद बोतल</option><option value="0">0-अन्य</option></select></div>
-      <div class="form-group"><label><span class="qno">प्र.18</span> पेयजल स्रोत की उपलब्धता</label><select id="hh_water_avail"><option value="">--</option><option value="1">1-परिसर के अन्दर</option><option value="2">2-परिसर के निकट</option><option value="3">3-दूर</option></select></div>
-      
-      <!-- Q19 Light -->
-      <div class="form-group"><label><span class="qno">प्र.19</span> प्रकाश का मुख्य स्रोत</label><select id="hh_light"><option value="">--</option><option value="1">1-बिजली</option><option value="2">2-मिट्टी का तेल</option><option value="3">3-सौर ऊर्जा</option><option value="4">4-अन्य तेल</option><option value="5">5-अन्य</option><option value="6">6-प्रकाश रहित</option></select></div>
-      
-      <!-- Q20 Toilet Availability -->
-      <div class="form-group"><label><span class="qno">प्र.20</span> शौचालय की सुलभता</label><select id="hh_toilet_avail"><option value="">--</option><option value="1">1-हाँ, केवल परिवार के लिए</option><option value="2">2-हाँ, अन्य परिवारों के साथ साझे में</option><option value="3">3-हाँ, सार्वजनिक शौचालय</option><option value="4">4-नहीं, खुले में</option></select></div>
-      
-      <!-- Q21 Toilet Type -->
-      <div class="form-group"><label><span class="qno">प्र.21</span> शौचालय का प्रकार</label><select id="hh_toilet_type"><option value="">--</option><option value="1">1-पाइप सीवर पद्धति</option><option value="2">2-सेप्टिक टैंक</option><option value="3">3-अन्य पद्धति</option><option value="4">4-स्लैब सहित उन्नत गड्ढा(दो गड्ढा)</option><option value="5">5-स्लैब रहित खुला गड्ढा(दो गड्ढा)</option><option value="6">6-स्लैब सहित उन्नत गड्ढा(एकल)</option><option value="7">7-स्लैब रहित खुला गड्ढा(एकल)</option><option value="8">8-मानव मल व्यक्ति द्वारा हटाया</option><option value="9">9-जानवरों द्वारा हटाया</option><option value="0">0-खुले नाले में</option></select></div>
-      
-      <!-- Q22 Drainage -->
-      <div class="form-group"><label><span class="qno">प्र.22</span> गंदे पानी की निकासी</label><select id="hh_drainage"><option value="">--</option><option value="1">1-ढकी नाली से</option><option value="2">2-खुली नाली से</option><option value="3">3-किसी नाली से नहीं</option></select></div>
-      
-      <!-- Q23 Bathroom -->
-      <div class="form-group"><label><span class="qno">प्र.23</span> स्नान सुविधा</label><select id="hh_bathroom"><option value="">--</option><option value="1">1-हाँ, स्नानगृह</option><option value="2">2-हाँ, छत रहित अहाता</option><option value="3">3-नहीं</option></select></div>
-      
-      <!-- Q24 LPG/PNG -->
-      <div class="form-group"><label><span class="qno">प्र.24</span> रसोई एवं LPG/PNG</label><select id="hh_lpg"><option value="">--</option><option value="1">1-रसोई घर+LPG/PNG</option><option value="2">2-रसोई घर+कोई गैस नहीं</option><option value="3">3-घर के भीतर+LPG/PNG(रसोई नहीं)</option><option value="4">4-घर के भीतर+कोई गैस नहीं</option><option value="5">5-खुले में+LPG/PNG</option><option value="6">6-खुले में+कोई गैस नहीं</option><option value="7">7-खाना नहीं पकाते</option></select></div>
-      
-      <!-- Q25 Fuel -->
-      <div class="form-group"><label><span class="qno">प्र.25</span> खाना पकाने का मुख्य ईंधन</label><select id="hh_fuel"><option value="">--</option><option value="1">1-जलाऊ लकड़ी</option><option value="2">2-फसल अवशेष</option><option value="3">3-उपला</option><option value="4">4-कोयला</option><option value="5">5-मिट्टी का तेल</option><option value="6">6-एलपीजी/पीएनजी</option><option value="7">7-बिजली</option><option value="8">8-गोबर गैस</option><option value="9">9-सौर ऊर्जा</option><option value="0">0-अन्य</option></select></div>
-      
-      <!-- Q26 Radio -->
-      <div class="form-group"><label><span class="qno">प्र.26</span> रेडियो/ट्रांजिस्टर</label><select id="hh_radio"><option value="">--</option><option value="1">1-पारंपरिक रेडियो सेट</option><option value="2">2-मोबाइल/स्मार्टफोन पर</option><option value="3">3-अन्य उपकरण पर</option><option value="4">4-नहीं</option></select></div>
-      
-      <!-- Q27 TV -->
-      <div class="form-group"><label><span class="qno">प्र.27</span> टेलीविजन</label><select id="hh_tv"><option value="">--</option><option value="1">1-दूरदर्शन फ्री डिश</option><option value="2">2-अन्य DTH/डिश</option><option value="3">3-केबल कनेक्शन</option><option value="4">4-अन्य</option><option value="5">5-नहीं</option></select></div>
-      
-      <!-- Q28 Internet -->
-      <div class="form-group"><label><span class="qno">प्र.28</span> इंटरनेट सुविधा</label><select id="hh_internet"><option value="">--</option><option value="1">1-लैपटॉप/कंप्यूटर पर</option><option value="2">2-मोबाइल/स्मार्टफोन पर</option><option value="3">3-अन्य उपकरण पर</option><option value="4">4-नहीं</option></select></div>
-      
-      <!-- Q29 Computer -->
-      <div class="form-group"><label><span class="qno">प्र.29</span> लैपटॉप/कंप्यूटर</label><select id="hh_computer"><option value="">--</option><option value="1">1-हाँ</option><option value="2">2-नहीं</option></select></div>
-      
-      <!-- Q30 Phone -->
-      <div class="form-group"><label><span class="qno">प्र.30</span> टेलीफोन/मोबाइल</label><select id="hh_phone"><option value="">--</option><option value="1">1-केवल लैंडलाइन</option><option value="2">2-केवल मोबाइल(स्मार्टफोन)</option><option value="3">3-केवल मोबाइल(साधारण)</option><option value="4">4-दोनों</option><option value="5">5-नहीं</option></select></div>
-      
-      <!-- Q31 Two Wheeler -->
-      <div class="form-group"><label><span class="qno">प्र.31</span> साइकिल/स्कूटर/मोटरसाइकिल</label><select id="hh_twowheeler"><option value="">--</option><option value="1">1-साइकिल</option><option value="2">2-स्कूटर/मोटरसाइकिल/मोपेड</option><option value="3">3-दोनों</option><option value="4">4-नहीं</option></select></div>
-      
-      <!-- Q32 Car -->
-      <div class="form-group"><label><span class="qno">प्र.32</span> कार/जीप/वैन</label><select id="hh_car"><option value="">--</option><option value="1">1-हाँ</option><option value="2">2-नहीं</option></select></div>
-      
-      <!-- Q33 Cereal -->
-      <div class="form-group"><label><span class="qno">प्र.33</span> मुख्य अनाज</label><select id="hh_cereal"><option value="">--</option><option value="1">1-चावल</option><option value="2">2-गेहूँ</option><option value="3">3-ज्वार</option><option value="4">4-बाजरा</option><option value="5">5-मक्का</option><option value="6">6-अन्य</option></select></div>
-      
-      <!-- Q34 Mobile -->
-      <div class="form-group"><label><span class="qno">प्र.34</span> मोबाइल नंबर</label><input type="tel" id="hh_mobile" maxlength="10" placeholder="10 अंक"></div>
-      
-      <div class="form-group"><label>📝 टिप्पणी</label><textarea id="hh_note" rows="2"></textarea></div>
-      
-      <div class="btn-group">
-        <button class="btn btn-secondary" onclick="cancelHHForm()">रद्द</button>
-        <button class="btn btn-primary" onclick="saveHousehold()">💾 सहेजें</button>
-        <button class="btn btn-danger" id="deleteHHBtn" onclick="deleteHousehold()" style="display:none;">🗑️ मिटाएं</button>
+<!-- ==================== PAGE: VIEW SUMMARY ==================== -->
+<div id="pageViewSummary" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageHome')">←</button>
+    <h2>HLO Training App</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div style="font-size:14px;font-weight:700;text-align:center;padding:8px;color:var(--blue2);">VIEW SUMMARY</div>
+    <div class="summary-box">
+      <div class="stat-row">
+        <div class="stat-item"><div class="val" id="sumTotalCH">0</div><div class="label">Total Census Houses</div></div>
+        <div class="stat-item"><div class="val" id="sumNonResid">0</div><div class="label">No. Of non-residential houses</div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-item"><div class="val" id="sumTotalHH">0</div><div class="label">Total Normal Households</div></div>
+        <div class="stat-item"><div class="val" id="sumInstitutional">0</div><div class="label">No. of Institutional Households</div></div>
+      </div>
+      <div class="status-row">
+        <span class="status-complete">✔ <span id="sumComplete">0</span><br><small>COMPLETE</small></span>
+        <span class="status-incomplete">✖ <span id="sumIncomplete">0</span><br><small>INCOMPLETE</small></span>
+        <span class="status-synced">↑ <span id="sumSynced">0</span><br><small>SYNCED</small></span>
+        <span class="status-locked">🔒 <span id="sumLocked">0</span><br><small>LOCKED</small></span>
+        <span class="status-deleted">🗑 0<br><small>DELETED</small></span>
+      </div>
+    </div>
+    <div id="summaryHHList"></div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: HLO DATA FORM ==================== -->
+<div id="pageHLOForm" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="cancelHHForm()">←</button>
+    <h2>HLO Data</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="confidential-bar">Confidential when filled</div>
+  <div class="line-ch-bar">
+    <span>Line No: <span id="formLineNo">001</span></span>
+    <span>CH No: <span id="formCHNo">0001</span></span>
+  </div>
+
+  <!-- Q1-Q3: Identification -->
+  <div class="content page-content-padded" id="formQuestions">
+    
+    <div class="card-section-label">Material Particulars</div>
+
+    <!-- Q1 -->
+    <div class="question-block">
+      <div class="question-title">1. Line number <span id="q1_display" style="color:var(--blue2);"></span></div>
+    </div>
+    <!-- Q2 -->
+    <div class="question-block">
+      <div class="question-title">2. Building number</div>
+      <input type="text" class="text-input" id="q2_building" placeholder="Enter building number">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Press Repeat if Building Number is same</div>
+      <div style="margin-top:6px;display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="repeatBuilding()">Repeat</button>
+        <button class="btn btn-blue btn-sm" onclick="newBuilding()">New</button>
+      </div>
+    </div>
+    <!-- Q3 -->
+    <div class="question-block">
+      <div class="question-title">3. Census house number <span id="q3_display" style="color:var(--blue2);"></span></div>
+      <div style="margin-top:6px;display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="repeatCH()">Repeat</button>
+        <button class="btn btn-blue btn-sm" onclick="newCH()">New</button>
+      </div>
+    </div>
+    <!-- Q4 -->
+    <div class="question-block">
+      <div class="question-title">4. Predominant material of Floor of the census house</div>
+      <div class="radio-group" id="rg_q4">
+        <div class="radio-item"><input type="radio" name="q4" value="1" id="q4_1"><label for="q4_1">1-Mud</label></div>
+        <div class="radio-item"><input type="radio" name="q4" value="2" id="q4_2"><label for="q4_2">2-Wood/bamboo</label></div>
+        <div class="radio-item"><input type="radio" name="q4" value="3" id="q4_3"><label for="q4_3">3-Burnt brick</label></div>
+        <div class="radio-item"><input type="radio" name="q4" value="4" id="q4_4"><label for="q4_4">4-Stone</label></div>
+        <div class="radio-item"><input type="radio" name="q4" value="5" id="q4_5"><label for="q4_5">5-Cement</label></div>
+        <div class="radio-item"><input type="radio" name="q4" value="6" id="q4_6"><label for="q4_6">6-Mosaic/floor tiles</label></div>
+        <div class="radio-item"><input type="radio" name="q4" value="7" id="q4_7"><label for="q4_7">7-Any other</label></div>
+      </div>
+    </div>
+    <!-- Q5 -->
+    <div class="question-block">
+      <div class="question-title">5. Predominant material of Wall of the census house</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q5" value="1" id="q5_1"><label for="q5_1">1-Grass/thatch/bamboo etc.</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="2" id="q5_2"><label for="q5_2">2-Plastic/polythene</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="3" id="q5_3"><label for="q5_3">3-Mud/Unburnt brick</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="4" id="q5_4"><label for="q5_4">4-Wood</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="5" id="q5_5"><label for="q5_5">5-Stone not packed with mortar</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="6" id="q5_6"><label for="q5_6">6-Stone packed with mortar</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="7" id="q5_7"><label for="q5_7">7-G.I/metal/asbestos sheets</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="8" id="q5_8"><label for="q5_8">8-Burnt brick</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="9" id="q5_9"><label for="q5_9">9-Concrete</label></div>
+        <div class="radio-item"><input type="radio" name="q5" value="0" id="q5_0"><label for="q5_0">0-Any other</label></div>
+      </div>
+    </div>
+    <!-- Q6 -->
+    <div class="question-block">
+      <div class="question-title">6. Predominant material of Roof of the census house</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q6" value="1" id="q6_1"><label for="q6_1">1-Grass/thatch/bamboo etc.</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="2" id="q6_2"><label for="q6_2">2-Plastic/polythene</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="3" id="q6_3"><label for="q6_3">3-Hand made tiles</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="4" id="q6_4"><label for="q6_4">4-Machine made tiles</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="5" id="q6_5"><label for="q6_5">5-Burnt brick</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="6" id="q6_6"><label for="q6_6">6-Stone</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="7" id="q6_7"><label for="q6_7">7-Slate</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="8" id="q6_8"><label for="q6_8">8-G.I/metal/asbestos sheets</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="9" id="q6_9"><label for="q6_9">9-Concrete</label></div>
+        <div class="radio-item"><input type="radio" name="q6" value="0" id="q6_0"><label for="q6_0">0-Any other</label></div>
+      </div>
+    </div>
+
+    <div class="card-section-label">Census House Particulars</div>
+
+    <!-- Q7 -->
+    <div class="question-block">
+      <div class="question-title">7. Ascertain Use of Census House</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q7" value="1" id="q7_1"><label for="q7_1">1-Residence</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="2" id="q7_2"><label for="q7_2">2-Residence-cum-other use</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="3" id="q7_3"><label for="q7_3">3-Shop/office</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="4" id="q7_4"><label for="q7_4">4-School/college etc.</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="5" id="q7_5"><label for="q7_5">5-Hotel/lodge/guest house etc.</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="6" id="q7_6"><label for="q7_6">6-Hospital/dispensary etc</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="7" id="q7_7"><label for="q7_7">7-Factory/workshop/workshed etc.</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="8" id="q7_8"><label for="q7_8">8-Place of worship</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="9" id="q7_9"><label for="q7_9">9-Other non-residential use</label></div>
+        <div class="radio-item"><input type="radio" name="q7" value="0" id="q7_0"><label for="q7_0">0-Vacant</label></div>
+      </div>
+    </div>
+    <!-- Q8 -->
+    <div class="question-block">
+      <div class="question-title">8. Condition of this census house</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q8" value="1" id="q8_1"><label for="q8_1">1-Good</label></div>
+        <div class="radio-item"><input type="radio" name="q8" value="2" id="q8_2"><label for="q8_2">2-Livable</label></div>
+        <div class="radio-item"><input type="radio" name="q8" value="3" id="q8_3"><label for="q8_3">3-Dilapidated</label></div>
+      </div>
+    </div>
+
+    <div class="card-section-label">Head of Household Particulars</div>
+
+    <!-- Q9 -->
+    <div class="question-block">
+      <div class="question-title">9. Household number</div>
+      <input type="text" class="text-input" id="q9_hhno" readonly>
+    </div>
+    <!-- Q10 -->
+    <div class="question-block">
+      <div class="question-title">10. Total number of persons normally residing in this household</div>
+      <input type="number" class="text-input" id="q10_members" min="0" placeholder="Enter Count">
+    </div>
+    <!-- Q11 -->
+    <div class="question-block">
+      <div class="question-title">11. Name of the head of the household</div>
+      <input type="text" class="text-input" id="q11_name" placeholder="Enter name">
+    </div>
+    <!-- Q12 -->
+    <div class="question-block">
+      <div class="question-title">12. Sex</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q12" value="1" id="q12_1"><label for="q12_1">1-Male</label></div>
+        <div class="radio-item"><input type="radio" name="q12" value="2" id="q12_2"><label for="q12_2">2-Female</label></div>
+        <div class="radio-item"><input type="radio" name="q12" value="3" id="q12_3"><label for="q12_3">3-Transgender person</label></div>
+      </div>
+    </div>
+    <!-- Q13 -->
+    <div class="question-block">
+      <div class="question-title">13. If SC or ST or Other</div>
+      <div class="question-hint">Scheduled Caste can be only from Hindus, Sikhs and Buddhists and not from any other religion. Scheduled Tribe can be from any religion.</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q13" value="1" id="q13_1"><label for="q13_1">1-SC</label></div>
+        <div class="radio-item"><input type="radio" name="q13" value="2" id="q13_2"><label for="q13_2">2-ST</label></div>
+        <div class="radio-item"><input type="radio" name="q13" value="3" id="q13_3"><label for="q13_3">3-Other</label></div>
+      </div>
+    </div>
+    <!-- Q14 -->
+    <div class="question-block">
+      <div class="question-title">14. Ownership status of this house</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q14" value="1" id="q14_1"><label for="q14_1">1-Owned</label></div>
+        <div class="radio-item"><input type="radio" name="q14" value="2" id="q14_2"><label for="q14_2">2-Rented but has own house elsewhere</label></div>
+        <div class="radio-item"><input type="radio" name="q14" value="3" id="q14_3"><label for="q14_3">3-Rented and doesn't own any house</label></div>
+        <div class="radio-item"><input type="radio" name="q14" value="4" id="q14_4"><label for="q14_4">4-Any other</label></div>
+      </div>
+    </div>
+    <!-- Q15 -->
+    <div class="question-block">
+      <div class="question-title">15. Number of dwelling rooms</div>
+      <div class="question-hint">Do not include kitchen, bathroom, latrine, store room, passageway and verandah. Include living room, bedroom, dining room, drawing room, study room, servant's room and other similar rooms.</div>
+      <input type="number" class="text-input" id="q15_rooms" min="0" placeholder="Enter Count">
+    </div>
+    <!-- Q16 -->
+    <div class="question-block">
+      <div class="question-title">16. Number of married couple(s) living in this household</div>
+      <input type="number" class="text-input" id="q16_couples" min="0" placeholder="Enter Count">
+    </div>
+
+    <div class="card-section-label">Amenities available to the household</div>
+
+    <!-- Q17 -->
+    <div class="question-block">
+      <div class="question-title">17. Main source of drinking water</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q17" value="1" id="q17_1"><label for="q17_1">1-Tap water from treated source</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="2" id="q17_2"><label for="q17_2">2-Tap water from un-treated source</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="3" id="q17_3"><label for="q17_3">3-Well</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="4" id="q17_4"><label for="q17_4">4-Hand Pump</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="5" id="q17_5"><label for="q17_5">5-Tubewell/borehole</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="6" id="q17_6"><label for="q17_6">6-Spring</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="7" id="q17_7"><label for="q17_7">7-River/canal</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="8" id="q17_8"><label for="q17_8">8-Tank/pond/lake</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="9" id="q17_9"><label for="q17_9">9-Packaged/bottled water</label></div>
+        <div class="radio-item"><input type="radio" name="q17" value="0" id="q17_0"><label for="q17_0">0-Other source</label></div>
+      </div>
+    </div>
+    <!-- Q18 -->
+    <div class="question-block">
+      <div class="question-title">18. Availability of drinking water source</div>
+      <div class="question-hint">"Near the premises" here means within 100 meters in Urban, within 500 meters in Rural</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q18" value="1" id="q18_1"><label for="q18_1">1-Within premises</label></div>
+        <div class="radio-item"><input type="radio" name="q18" value="2" id="q18_2"><label for="q18_2">2-Near the premises</label></div>
+        <div class="radio-item"><input type="radio" name="q18" value="3" id="q18_3"><label for="q18_3">3-Away</label></div>
+      </div>
+    </div>
+    <!-- Q19 -->
+    <div class="question-block">
+      <div class="question-title">19. Main source of lighting</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q19" value="1" id="q19_1"><label for="q19_1">1-Electricity</label></div>
+        <div class="radio-item"><input type="radio" name="q19" value="2" id="q19_2"><label for="q19_2">2-Kerosene</label></div>
+        <div class="radio-item"><input type="radio" name="q19" value="3" id="q19_3"><label for="q19_3">3-Solar</label></div>
+        <div class="radio-item"><input type="radio" name="q19" value="4" id="q19_4"><label for="q19_4">4-Other oil</label></div>
+        <div class="radio-item"><input type="radio" name="q19" value="5" id="q19_5"><label for="q19_5">5-Any Other</label></div>
+        <div class="radio-item"><input type="radio" name="q19" value="6" id="q19_6"><label for="q19_6">6-No lighting</label></div>
+      </div>
+    </div>
+    <!-- Q20 -->
+    <div class="question-block">
+      <div class="question-title">20. Access to latrine</div>
+      <div class="radio-sub-label">Yes</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q20" value="1" id="q20_1"><label for="q20_1">1-Exclusively for household use only</label></div>
+        <div class="radio-item"><input type="radio" name="q20" value="2" id="q20_2"><label for="q20_2">2-Shared with other household</label></div>
+        <div class="radio-item"><input type="radio" name="q20" value="3" id="q20_3"><label for="q20_3">3-Public latrine</label></div>
+      </div>
+      <div class="radio-sub-label">No</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q20" value="4" id="q20_4"><label for="q20_4">4-Open</label></div>
+      </div>
+    </div>
+    <!-- Q21 -->
+    <div class="question-block">
+      <div class="question-title">21. Type of latrine</div>
+      <div class="radio-sub-label">Flush/pour-flush latrine connected to</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q21" value="1" id="q21_1"><label for="q21_1">1 - Piped sewer system</label></div>
+        <div class="radio-item"><input type="radio" name="q21" value="2" id="q21_2"><label for="q21_2">2 - Septic tank</label></div>
+        <div class="radio-item"><input type="radio" name="q21" value="3" id="q21_3"><label for="q21_3">3 - Other system</label></div>
+      </div>
+      <div class="radio-sub-label">Twin Pit latrine</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q21" value="4" id="q21_4"><label for="q21_4">4 - With slab / ventilated improved pit</label></div>
+        <div class="radio-item"><input type="radio" name="q21" value="5" id="q21_5"><label for="q21_5">5 - Without slab / open pit</label></div>
+      </div>
+      <div class="radio-sub-label">Single Pit latrine</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q21" value="6" id="q21_6"><label for="q21_6">6 - With slab / ventilated improved pit</label></div>
+        <div class="radio-item"><input type="radio" name="q21" value="7" id="q21_7"><label for="q21_7">7 - Without slab / open pit</label></div>
+      </div>
+      <div class="radio-sub-label">Service latrine</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q21" value="8" id="q21_8"><label for="q21_8">8 - Night soil removed by human</label></div>
+        <div class="radio-item"><input type="radio" name="q21" value="9" id="q21_9"><label for="q21_9">9 - Night soil serviced by animals</label></div>
+        <div class="radio-item"><input type="radio" name="q21" value="0" id="q21_0"><label for="q21_0"><strong>0 - Night soil disposed into open drain</strong></label></div>
+      </div>
+    </div>
+    <!-- Q22 -->
+    <div class="question-block">
+      <div class="question-title">22. Waste water outlet connected to</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q22" value="1" id="q22_1"><label for="q22_1">1-Closed drainage</label></div>
+        <div class="radio-item"><input type="radio" name="q22" value="2" id="q22_2"><label for="q22_2">2-Open drainage</label></div>
+        <div class="radio-item"><input type="radio" name="q22" value="3" id="q22_3"><label for="q22_3">3-No drainage</label></div>
+      </div>
+    </div>
+    <!-- Q23 -->
+    <div class="question-block">
+      <div class="question-title">23. Bathing facility available within the premises</div>
+      <div class="radio-sub-label">Yes</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q23" value="1" id="q23_1"><label for="q23_1">1-Bathroom</label></div>
+        <div class="radio-item"><input type="radio" name="q23" value="2" id="q23_2"><label for="q23_2">2-Enclosure without roof</label></div>
+      </div>
+      <div class="radio-sub-label">No</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q23" value="3" id="q23_3"><label for="q23_3">3-No</label></div>
+      </div>
+    </div>
+    <!-- Q24 -->
+    <div class="question-block">
+      <div class="question-title">24. Availability of kitchen and LPG/PNG Connection</div>
+      <div class="radio-sub-label">Cooking in kitchen</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q24" value="1" id="q24_1"><label for="q24_1">1-Has LPG/PNG Connection</label></div>
+        <div class="radio-item"><input type="radio" name="q24" value="2" id="q24_2"><label for="q24_2">2-Doesn't have LPG/PNG Connection</label></div>
+      </div>
+      <div class="radio-sub-label">Cooking inside house, but not in kitchen</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q24" value="3" id="q24_3"><label for="q24_3">3-Has LPG/PNG Connection</label></div>
+        <div class="radio-item"><input type="radio" name="q24" value="4" id="q24_4"><label for="q24_4">4-Doesn't have LPG/PNG Connection</label></div>
+      </div>
+      <div class="radio-sub-label">Cooking in open/outside house</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q24" value="5" id="q24_5"><label for="q24_5">5-Has LPG/PNG Connection</label></div>
+        <div class="radio-item"><input type="radio" name="q24" value="6" id="q24_6"><label for="q24_6">6-Doesn't have LPG/PNG Connection</label></div>
+        <div class="radio-item"><input type="radio" name="q24" value="7" id="q24_7"><label for="q24_7"><strong>7-No cooking</strong></label></div>
+      </div>
+    </div>
+    <!-- Q25 -->
+    <div class="question-block">
+      <div class="question-title">25. Main fuel used for cooking</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q25" value="1" id="q25_1"><label for="q25_1">1-Firewood</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="2" id="q25_2"><label for="q25_2">2-Crop residue</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="3" id="q25_3"><label for="q25_3">3-Cowdung cake</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="4" id="q25_4"><label for="q25_4">4-Coal/lignite/charcoal</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="5" id="q25_5"><label for="q25_5">5-Kerosene</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="6" id="q25_6"><label for="q25_6">6-LPG/PNG</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="7" id="q25_7"><label for="q25_7">7-Electricity</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="8" id="q25_8"><label for="q25_8">8-Bio-gas</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="9" id="q25_9"><label for="q25_9">9-Solar</label></div>
+        <div class="radio-item"><input type="radio" name="q25" value="0" id="q25_0"><label for="q25_0">0-Any other</label></div>
+      </div>
+    </div>
+
+    <div class="card-section-label">Assets possessed by the household</div>
+
+    <!-- Q26 -->
+    <div class="question-block">
+      <div class="question-title">26. Radio/Transistor</div>
+      <div class="radio-sub-label">Yes</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q26" value="1" id="q26_1"><label for="q26_1">1-Traditional radio set</label></div>
+        <div class="radio-item"><input type="radio" name="q26" value="2" id="q26_2"><label for="q26_2">2-On mobile/smartphone</label></div>
+        <div class="radio-item"><input type="radio" name="q26" value="3" id="q26_3"><label for="q26_3">3-On any other device</label></div>
+      </div>
+      <div class="radio-sub-label">No</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q26" value="4" id="q26_4"><label for="q26_4">4-No</label></div>
+      </div>
+    </div>
+    <!-- Q27 -->
+    <div class="question-block">
+      <div class="question-title">27. Television</div>
+      <div class="radio-sub-label">Yes</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q27" value="1" id="q27_1"><label for="q27_1">1-Doordarshan free dish</label></div>
+        <div class="radio-item"><input type="radio" name="q27" value="2" id="q27_2"><label for="q27_2">2-Other DTH/Dish</label></div>
+        <div class="radio-item"><input type="radio" name="q27" value="3" id="q27_3"><label for="q27_3">3-Cable connection</label></div>
+        <div class="radio-item"><input type="radio" name="q27" value="4" id="q27_4"><label for="q27_4">4-Any other</label></div>
+      </div>
+      <div class="radio-sub-label">No</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q27" value="5" id="q27_5"><label for="q27_5">5-No</label></div>
+      </div>
+    </div>
+    <!-- Q28 -->
+    <div class="question-block">
+      <div class="question-title">28. Access to internet</div>
+      <div class="radio-sub-label">Yes</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q28" value="1" id="q28_1"><label for="q28_1">1-On laptop/Computer</label></div>
+        <div class="radio-item"><input type="radio" name="q28" value="2" id="q28_2"><label for="q28_2">2-On mobile/smartphone</label></div>
+        <div class="radio-item"><input type="radio" name="q28" value="3" id="q28_3"><label for="q28_3">3-On any other device</label></div>
+      </div>
+      <div class="radio-sub-label">No</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q28" value="4" id="q28_4"><label for="q28_4">4-No</label></div>
+      </div>
+    </div>
+    <!-- Q29 -->
+    <div class="question-block">
+      <div class="question-title">29. Laptop/Computer</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q29" value="1" id="q29_1"><label for="q29_1">1-Yes</label></div>
+        <div class="radio-item"><input type="radio" name="q29" value="2" id="q29_2"><label for="q29_2">2-No</label></div>
+      </div>
+    </div>
+    <!-- Q30 -->
+    <div class="question-block">
+      <div class="question-title">30. Telephone and Mobile phone/Smartphone</div>
+      <div class="radio-sub-label">Yes</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q30" value="1" id="q30_1"><label for="q30_1">1-Landline only</label></div>
+      </div>
+      <div class="radio-sub-label">Mobile only</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q30" value="2" id="q30_2"><label for="q30_2">2-Smartphone</label></div>
+        <div class="radio-item"><input type="radio" name="q30" value="3" id="q30_3"><label for="q30_3">3-Other basic mobile</label></div>
+        <div class="radio-item"><input type="radio" name="q30" value="4" id="q30_4"><label for="q30_4">4-Both</label></div>
+      </div>
+      <div class="radio-sub-label">No</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q30" value="5" id="q30_5"><label for="q30_5">5-No</label></div>
+      </div>
+    </div>
+    <!-- Q31 -->
+    <div class="question-block">
+      <div class="question-title">31. Bicycle and Scooter/Motorcycle/Moped</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q31" value="1" id="q31_1"><label for="q31_1">1-Bicycle</label></div>
+        <div class="radio-item"><input type="radio" name="q31" value="2" id="q31_2"><label for="q31_2">2-Scooter/Motorcycle/Moped</label></div>
+        <div class="radio-item"><input type="radio" name="q31" value="3" id="q31_3"><label for="q31_3">3-Both</label></div>
+        <div class="radio-item"><input type="radio" name="q31" value="4" id="q31_4"><label for="q31_4">4-None</label></div>
+      </div>
+    </div>
+    <!-- Q32 -->
+    <div class="question-block">
+      <div class="question-title">32. Car/Jeep/Van</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q32" value="1" id="q32_1"><label for="q32_1">1-Yes</label></div>
+        <div class="radio-item"><input type="radio" name="q32" value="2" id="q32_2"><label for="q32_2">2-No</label></div>
+      </div>
+    </div>
+    <!-- Q33 -->
+    <div class="question-block">
+      <div class="question-title">33. Main cereal consumed in the household</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q33" value="1" id="q33_1"><label for="q33_1">1-Rice</label></div>
+        <div class="radio-item"><input type="radio" name="q33" value="2" id="q33_2"><label for="q33_2">2-Wheat</label></div>
+        <div class="radio-item"><input type="radio" name="q33" value="3" id="q33_3"><label for="q33_3">3-Jowar</label></div>
+        <div class="radio-item"><input type="radio" name="q33" value="4" id="q33_4"><label for="q33_4">4-Bajra</label></div>
+        <div class="radio-item"><input type="radio" name="q33" value="5" id="q33_5"><label for="q33_5">5-Maize</label></div>
+        <div class="radio-item"><input type="radio" name="q33" value="6" id="q33_6"><label for="q33_6">6-Any other</label></div>
+      </div>
+    </div>
+    <!-- Q34 -->
+    <div class="question-block">
+      <div class="question-title">34. Mobile Number</div>
+      <div class="question-hint">For census related communications only</div>
+      <input type="tel" class="text-input" id="q34_mobile" maxlength="10" placeholder="10 digit mobile number">
+    </div>
+
+    <!-- SE Reference -->
+    <div class="question-block">
+      <div class="question-title">SE Reference (Self-Enumeration)</div>
+      <div class="radio-group">
+        <div class="radio-item"><input type="radio" name="q_se" value="yes" id="se_yes"><label for="se_yes">Yes — Household has completed Self-Enumeration</label></div>
+        <div class="radio-item"><input type="radio" name="q_se" value="no" id="se_no"><label for="se_no">No</label></div>
+      </div>
+    </div>
+
+    <!-- Remarks -->
+    <div class="question-block">
+      <div class="question-title">Remarks / टिप्पणी</div>
+      <textarea class="text-input" id="q_remarks" rows="2" placeholder="Optional remarks..."></textarea>
+    </div>
+
+  </div><!-- end content -->
+
+  <!-- Bottom Nav: Prev / Jump / Submit -->
+  <div class="bottom-nav-inner">
+    <button class="btn btn-outline" onclick="cancelHHForm()" style="min-width:80px;">Prev</button>
+    <button class="btn btn-gray" onclick="showJumpModal()" style="min-width:80px;">Jump</button>
+    <button class="btn btn-blue" onclick="submitForReview()" style="min-width:80px;">Submit</button>
+  </div>
+</div>
+
+<!-- ==================== PAGE: ANSWERS REVIEW ==================== -->
+<div id="pageReview" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageHLOForm')">←</button>
+    <h2>Answers Review</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div id="reviewList"></div>
+  </div>
+  <div class="bottom-nav-inner">
+    <button class="btn btn-outline" onclick="showPage('pageHLOForm')" style="min-width:80px;">Cancel</button>
+    <button class="btn btn-gray" onclick="showPage('pageHLOForm')" style="min-width:80px;">Edit</button>
+    <button class="btn btn-blue" onclick="confirmAndSave()" style="min-width:80px;">Confirm</button>
+  </div>
+</div>
+
+<!-- ==================== PAGE: SIGNATURE / SYNC ==================== -->
+<div id="pageSignature" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageReview')">←</button>
+    <h2>HLO Training App</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div class="sig-box">
+      <div class="sig-confirm-text">Training App</div>
+      <p style="font-size:13px;margin-bottom:12px;">Please sign below:</p>
+      <div class="checkbox-row">
+        <input type="checkbox" id="sigConfirmCheck">
+        <label for="sigConfirmCheck">I hereby confirm that I have entered the data correctly in the records which are already completed by me. I am uploading the data of these completed records after verifying the correctness of the same.</label>
+      </div>
+      <canvas id="sigCanvas" width="300" height="150"></canvas>
+      <p style="font-size:10px;color:var(--muted);margin-top:6px;" id="sigPlaceholder">Please provide your signature</p>
+    </div>
+  </div>
+  <div class="bottom-nav-inner">
+    <button class="btn btn-outline" onclick="clearSignature()" style="min-width:100px;">Clear</button>
+    <button class="btn btn-blue" onclick="saveAndSync()" style="min-width:120px;">Save & Sync</button>
+  </div>
+</div>
+
+<!-- ==================== PAGE: ANALYSIS ==================== -->
+<div id="pageAnalysis" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageHome')">←</button>
+    <h2>विश्लेषण / Analysis</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div id="analysisContent"></div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: SETTINGS ==================== -->
+<div id="pageSettings" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageHome')">←</button>
+    <h2>⚙️ Settings</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+    <div class="section-heading">प्रगणक जानकारी</div>
+    <div class="card" style="padding:14px;">
+      <div class="form-group"><label class="form-label">प्रगणक का नाम</label><input type="text" class="text-input" id="cfg_name"></div>
+      <div class="form-group"><label class="form-label">HLB Block Number</label><input type="text" class="text-input" id="cfg_hlb"></div>
+      <div class="form-group"><label class="form-label">वार्ड/मोहल्ला</label><input type="text" class="text-input" id="cfg_ward"></div>
+      <div class="form-group"><label class="form-label">ग्राम/शहर</label><input type="text" class="text-input" id="cfg_village"></div>
+      <div class="form-group"><label class="form-label">जिला</label><input type="text" class="text-input" id="cfg_district"></div>
+      <div class="form-group"><label class="form-label">कुल लक्ष्य (परिवार)</label><input type="number" class="text-input" id="cfg_target"></div>
+      <button class="btn btn-blue" onclick="saveConfig()">💾 सेटिंग्स सहेजें</button>
+    </div>
+
+    <div class="section-heading">डेटा प्रबंधन</div>
+    <div class="card" style="padding:14px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <button class="btn btn-green btn-sm" onclick="exportExcel()">📊 Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">📄 CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="exportJSON()">💾 Backup</button>
+        <label class="btn btn-outline btn-sm" style="cursor:pointer;">📂 Restore<input type="file" accept=".json" style="display:none;" onchange="importJSON(this)"></label>
+        <button class="btn btn-red btn-sm" onclick="clearAllData()">🗑️ सब मिटाएं</button>
+      </div>
+    </div>
+
+    <div class="section-heading">Cloud Sync</div>
+    <div class="card" style="padding:14px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-blue btn-sm" onclick="syncFromFirebase()">📥 Firebase Pull</button>
+        <button class="btn btn-green btn-sm" onclick="pushToFirebase()">📤 Firebase Push</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ========== VIEW: ANALYSIS ========== -->
-<div id="viewAnalysis" style="display:none;">
-  <div class="card">
-    <div class="card-header">📊 विश्लेषण रिपोर्ट</div>
-    <div class="card-body">
-      <div class="stats-grid" id="analysisSummary"></div>
-      <div id="analysisTable"></div>
+<!-- ==================== MODALS ==================== -->
+<!-- SE Reference Modal -->
+<div class="modal-overlay" id="seModal">
+  <div class="modal-box">
+    <h3>SE Reference</h3>
+    <p>Whether the household has completed Self-Enumeration?</p>
+    <div class="modal-btns">
+      <button class="modal-btn-no" onclick="closeModal('seModal')">No</button>
+      <button class="modal-btn-yes" onclick="closeModal('seModal')">Yes</button>
+    </div>
+  </div>
+</div>
+<!-- Jump Modal -->
+<div class="modal-overlay" id="jumpModal">
+  <div class="modal-box">
+    <h3>Jump to Question</h3>
+    <select class="select-input" id="jumpSelect" style="margin-bottom:12px;">
+      <option value="">Select Question</option>
+      <option value="q4">Q4 - Floor material</option>
+      <option value="q5">Q5 - Wall material</option>
+      <option value="q6">Q6 - Roof material</option>
+      <option value="q7">Q7 - Use of house</option>
+      <option value="q8">Q8 - Condition</option>
+      <option value="q9">Q9 - Household number</option>
+      <option value="q10">Q10 - Total persons</option>
+      <option value="q11">Q11 - Head name</option>
+      <option value="q12">Q12 - Sex</option>
+      <option value="q13">Q13 - SC/ST/Other</option>
+      <option value="q14">Q14 - Ownership</option>
+      <option value="q15">Q15 - Dwelling rooms</option>
+      <option value="q16">Q16 - Married couples</option>
+      <option value="q17">Q17 - Drinking water source</option>
+      <option value="q18">Q18 - Water availability</option>
+      <option value="q19">Q19 - Lighting</option>
+      <option value="q20">Q20 - Access to latrine</option>
+      <option value="q21">Q21 - Type of latrine</option>
+      <option value="q22">Q22 - Waste water</option>
+      <option value="q23">Q23 - Bathing facility</option>
+      <option value="q24">Q24 - Kitchen/LPG</option>
+      <option value="q25">Q25 - Cooking fuel</option>
+      <option value="q26">Q26 - Radio</option>
+      <option value="q27">Q27 - Television</option>
+      <option value="q28">Q28 - Internet</option>
+      <option value="q29">Q29 - Laptop/Computer</option>
+      <option value="q30">Q30 - Phone</option>
+      <option value="q31">Q31 - Bicycle/Motorcycle</option>
+      <option value="q32">Q32 - Car/Jeep/Van</option>
+      <option value="q33">Q33 - Main cereal</option>
+      <option value="q34">Q34 - Mobile number</option>
+    </select>
+    <div class="modal-btns">
+      <button class="modal-btn-no" onclick="closeModal('jumpModal')">Cancel</button>
+      <button class="modal-btn-yes" onclick="doJump()">Jump</button>
     </div>
   </div>
 </div>
 
-<!-- ========== VIEW: SETTINGS ========== -->
-<div id="viewSettings" style="display:none;">
-  <div class="card">
-    <div class="card-header">⚙️ प्रगणक सेटिंग्स</div>
-    <div class="card-body">
-      <div class="form-group"><label>प्रगणक का नाम</label><input type="text" id="cfg_name"></div>
-      <div class="form-group"><label>HLB नंबर</label><input type="text" id="cfg_hlb"></div>
-      <div class="form-group"><label>वार्ड/मोहल्ला</label><input type="text" id="cfg_ward"></div>
-      <div class="form-group"><label>ग्राम/शहर</label><input type="text" id="cfg_village"></div>
-      <div class="form-group"><label>जिला</label><input type="text" id="cfg_district"></div>
-      <div class="form-group"><label>कुल लक्ष्य (परिवार)</label><input type="number" id="cfg_target"></div>
-      <button class="btn btn-primary" onclick="saveConfig()">💾 सेटिंग्स सहेजें</button>
-    </div>
-  </div>
-  
-  <div class="card">
-    <div class="card-header">📁 डेटा निर्यात/आयात</div>
-    <div class="card-body">
-      <div class="btn-group">
-        <button class="btn btn-success" onclick="exportExcel()">📊 Excel</button>
-        <button class="btn btn-outline" onclick="exportCSV()">📄 CSV</button>
-        <button class="btn btn-primary" onclick="exportPDF()">📑 PDF</button>
-        <button class="btn btn-secondary" onclick="exportJSON()">💾 Backup</button>
-        <label class="btn btn-outline" style="cursor:pointer;">📂 Restore<input type="file" accept=".json" style="display:none;" onchange="importJSON(this)"></label>
-      </div>
-    </div>
-  </div>
-  
-  <div class="card">
-    <div class="card-header">☁️ क्लाउड सिंक</div>
-    <div class="card-body">
-      <button class="btn btn-primary" onclick="syncFromFirebase()">📥 Firebase से Pull</button>
-      <button class="btn btn-success" onclick="pushToFirebase()">📤 Firebase पर Push</button>
-      <button class="btn btn-danger" onclick="clearAllData()">🗑️ सभी डेटा मिटाएं</button>
-    </div>
-  </div>
-</div>
-
-</div>
 <script>
-// ==================== DATA STRUCTURE ====================
-let data = { buildings: [], config: { enumerator: "प्रगणक", hlb: "HLB-001", target: 100 } };
-let currentBuildingId = null, currentCHId = null, currentHHId = null;
-let _fbSyncEnabled = false;
+// ============================================================
+// DATA
+// ============================================================
+let appData = {
+  records: [],
+  config: { name: 'प्रगणक', hlb: 'HLB-001', ward: '', village: '', district: '', target: 100 },
+  nextLineNo: 1,
+  nextCHNo: 1,
+  nextHHNo: 1
+};
+let currentEditId = null;
+let sigDrawing = false, sigLastX, sigLastY;
 
-function saveToLocal() { localStorage.setItem('census2027_data', JSON.stringify(data)); localStorage.setItem('census2027_config', JSON.stringify(data.config)); updateAllViews(); }
-function loadFromLocal() { let saved = localStorage.getItem('census2027_data'); if(saved) data = JSON.parse(saved); let cfg = localStorage.getItem('census2027_config'); if(cfg) data.config = JSON.parse(cfg); updateAllViews(); }
-
-function getTotalBuildings() { return data.buildings.length; }
-function getTotalCH() { return data.buildings.reduce((s,b)=>s+(b.census_houses?.length||0),0); }
-function getTotalHH() { return data.buildings.reduce((s,b)=>s+(b.census_houses?.reduce((s2,ch)=>s2+(ch.households?.length||0),0)||0),0); }
-function getCompletedHH() { let c=0; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{(ch.households||[]).forEach(h=>{if(h.head_name && h.members>0) c++;});});}); return c; }
-
-function getNextCHNumber() { let max=0; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{let n=parseInt(ch.ch_no); if(n>max) max=n;});}); return String(max+1).padStart(4,'0'); }
-function getNextLineNumber() { let max=0; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{(ch.households||[]).forEach(h=>{let n=parseInt(h.line_no); if(n>max) max=n;});});}); return String(max+1).padStart(3,'0'); }
-function getNextFamilyNumber(inst=false){ if(inst) return "999"; let max=0; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{if(ch.institutional!=='yes'){(ch.households||[]).forEach(h=>{let n=parseInt(h.family_no); if(n>max && n!==999) max=n;});}});}); return String(max+1).padStart(3,'0'); }
-
-function updateAllViews() {
-  document.getElementById('enumeratorName').innerText = data.config.enumerator || '—';
-  document.getElementById('hlbNumber').innerText = data.config.hlb || '—';
-  document.getElementById('statBuildings').innerText = getTotalBuildings();
-  document.getElementById('statCH').innerText = getTotalCH();
-  document.getElementById('statHH').innerText = getTotalHH();
-  let completed = getCompletedHH();
-  document.getElementById('completedHH').innerText = completed;
-  let target = data.config.target || 100;
-  document.getElementById('targetHH').innerText = target;
-  let pct = target>0 ? (completed/target*100) : 0;
-  document.getElementById('progressFill').style.width = pct+'%';
-  let b = currentBuildingId ? data.buildings.find(b=>b.id===currentBuildingId) : null;
-  let ch = (currentBuildingId && currentCHId) ? b?.census_houses?.find(c=>c.id===currentCHId) : null;
-  document.getElementById('hierBuilding').innerText = b ? b.building_no : '—';
-  document.getElementById('hierCH').innerText = ch ? ch.ch_no : '—';
-  document.getElementById('hierHH').innerText = currentHHId ? 'परिवार' : '—';
-  renderBuildingList();
-  if(currentBuildingId) renderCHList();
-  if(currentBuildingId && currentCHId) renderHHList();
+function save() { localStorage.setItem('census2027v2', JSON.stringify(appData)); refreshStats(); }
+function load() {
+  let d = localStorage.getItem('census2027v2');
+  if(d) appData = JSON.parse(d);
+  refreshStats();
+  loadConfigForm();
 }
 
-function showView(view){ document.querySelectorAll('[id^="view"]').forEach(v=>v.style.display='none'); document.getElementById('view'+view.charAt(0).toUpperCase()+view.slice(1)).style.display='block'; if(view==='analysis') renderAnalysis(); }
-function showBuildingForm(){ document.getElementById('viewBuildings').style.display='none'; document.getElementById('formBuilding').style.display='block'; }
-function cancelBuildingForm(){ document.getElementById('formBuilding').style.display='none'; document.getElementById('viewBuildings').style.display='block'; }
-function saveBuilding(){ let no=document.getElementById('bld_no').value.trim(); if(!no){alert("भवन संख्या चाहिए");return;} if(data.buildings.find(b=>b.building_no===no)){alert("पहले से मौजूद");return;} data.buildings.push({id:Date.now().toString(36)+Math.random().toString(36).substr(2,4), building_no:no, floor:document.getElementById('bld_floor').value, wall:document.getElementById('bld_wall').value, roof:document.getElementById('bld_roof').value, census_houses:[]}); saveToLocal(); cancelBuildingForm(); toast("भवन सहेजा"); }
+// ============================================================
+// STATS
+// ============================================================
+function refreshStats() {
+  let recs = appData.records;
+  let totalCH = new Set(recs.map(r=>r.ch_no)).size;
+  let totalHH = recs.filter(r=>r.family_type!=='institutional').length;
+  let institutional = recs.filter(r=>r.family_type==='institutional').length;
+  let nonResid = recs.filter(r=>r.q7 && ['3','4','5','6','7','8','9','0'].includes(r.q7)).length;
+  let complete = recs.filter(r=>r.q11_name && r.q10_members).length;
+  let incomplete = recs.length - complete;
+  let synced = recs.filter(r=>r.synced).length;
+  let locked = recs.filter(r=>r.locked).length;
 
-function renderBuildingList(){ let c=document.getElementById('buildingList'); if(!data.buildings.length){c.innerHTML='<div class="text-muted text-center" style="padding:30px;">कोई भवन नहीं</div>';return;} c.innerHTML=data.buildings.map(b=>`<div class="level-card" onclick="selectBuilding('${b.id}')"><div class="title">🏛️ ${b.building_no}</div><div class="sub">${b.census_houses?.length||0} मकान</div></div>`).join(''); }
-function selectBuilding(bid){ currentBuildingId=bid; currentCHId=null; currentHHId=null; document.getElementById('viewBuildings').style.display='none'; document.getElementById('viewCH').style.display='block'; renderCHList(); }
-function backToBuildings(){ currentBuildingId=null; currentCHId=null; currentHHId=null; document.getElementById('viewCH').style.display='none'; document.getElementById('viewBuildings').style.display='block'; updateAllViews(); }
+  setTxt('homeTotalCH', totalCH);
+  setTxt('homeNonResid', nonResid);
+  setTxt('homeTotalHH', totalHH);
+  setTxt('homeInstitutional', institutional);
+  setTxt('homeComplete', complete);
+  setTxt('homeIncomplete', incomplete);
+  setTxt('homeSynced', synced);
+  setTxt('homeLocked', locked);
+  setTxt('sumTotalCH', totalCH);
+  setTxt('sumNonResid', nonResid);
+  setTxt('sumTotalHH', totalHH);
+  setTxt('sumInstitutional', institutional);
+  setTxt('sumComplete', complete);
+  setTxt('sumIncomplete', incomplete);
+  setTxt('sumSynced', synced);
+  setTxt('sumLocked', locked);
 
-function renderCHList(){ let b=data.buildings.find(b=>b.id===currentBuildingId); let c=document.getElementById('chList'); if(!b?.census_houses?.length){c.innerHTML='<div class="text-muted text-center" style="padding:30px;">कोई मकान नहीं</div>';return;} c.innerHTML=b.census_houses.map(ch=>`<div class="level-card" onclick="selectCH('${ch.id}')"><div class="title">🏠 मकान ${ch.ch_no} ${ch.locked==='yes'?'🔒':''} ${ch.institutional==='yes'?'🏢':''}</div><div class="sub">${ch.households?.length||0} परिवार</div></div>`).join(''); }
-function selectCH(chid){ let b=data.buildings.find(b=>b.id===currentBuildingId); let ch=b?.census_houses?.find(c=>c.id===chid); if(ch?.locked==='yes'){alert("मकान बंद है");return;} currentCHId=chid; currentHHId=null; document.getElementById('viewCH').style.display='none'; document.getElementById('viewHH').style.display='block'; renderHHList(); }
-function backToCH(){ currentCHId=null; currentHHId=null; document.getElementById('viewHH').style.display='none'; document.getElementById('viewCH').style.display='block'; updateAllViews(); }
+  let cfg = appData.config;
+  setTxt('cfgNameDisplay', cfg.name||'—');
+  setTxt('cfgHLBDisplay', cfg.hlb||'—');
+  setTxt('hlbDisplay2', cfg.hlb||'—');
 
-function renderHHList(){ let b=data.buildings.find(b=>b.id===currentBuildingId); let ch=b?.census_houses?.find(c=>c.id===currentCHId); let c=document.getElementById('hhList'); if(!ch?.households?.length){c.innerHTML='<div class="text-muted text-center" style="padding:30px;">कोई परिवार नहीं</div>';return;} c.innerHTML=ch.households.map(hh=>`<div class="level-card" onclick="selectHH('${hh.id}')"><div class="title">👨‍👩‍👧‍👦 परिवार #${hh.family_no}</div><div class="sub">${hh.head_name||'नाम नहीं'} · ${hh.members||0} सदस्य</div></div>`).join(''); }
-function selectHH(hhid){ currentHHId=hhid; showHHForm(true); }
+  renderUpdationList();
+  renderSummaryList();
+}
+function setTxt(id, val) { let el=document.getElementById(id); if(el) el.innerText=val; }
 
-function showCHForm(){ let b=data.buildings.find(b=>b.id===currentBuildingId); if(!b)return; document.getElementById('viewCH').style.display='none'; document.getElementById('formCH').style.display='block'; document.getElementById('ch_number').value=getNextCHNumber(); document.getElementById('ch_use').value=''; document.getElementById('ch_use_desc').value=''; document.getElementById('ch_condition').value=''; document.getElementById('ch_locked').value='no'; document.getElementById('ch_institutional').value='no'; document.getElementById('useDescGroup').style.display='none'; }
-function toggleUseDesc(){ document.getElementById('useDescGroup').style.display=document.getElementById('ch_use').value==='2'?'block':'none'; }
-function cancelCHForm(){ document.getElementById('formCH').style.display='none'; document.getElementById('viewCH').style.display='block'; }
-function saveCensusHouse(){ let b=data.buildings.find(b=>b.id===currentBuildingId); if(!b)return; let no=document.getElementById('ch_number').value; let use=document.getElementById('ch_use').value; if(!use){alert("मकान का उपयोग चुनें");return;} let ch={id:Date.now().toString(36)+Math.random().toString(36).substr(2,4), ch_no:no, use:use, use_desc:document.getElementById('ch_use_desc').value, condition:document.getElementById('ch_condition').value, locked:document.getElementById('ch_locked').value, institutional:document.getElementById('ch_institutional').value, households:[]}; if(!b.census_houses) b.census_houses=[]; b.census_houses.push(ch); saveToLocal(); cancelCHForm(); toast("मकान सहेजा"); }
+// ============================================================
+// PAGE NAVIGATION
+// ============================================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='pageAnalysis') renderAnalysis();
+  if(id==='pageViewSummary') refreshStats();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-function showHHForm(edit=false){ let b=data.buildings.find(b=>b.id===currentBuildingId); let ch=b?.census_houses?.find(c=>c.id===currentCHId); if(!ch)return; document.getElementById('viewHH').style.display='none'; document.getElementById('formHH').style.display='block'; document.getElementById('deleteHHBtn').style.display=edit?'inline-flex':'none'; if(edit && currentHHId){ let hh=ch.households?.find(h=>h.id===currentHHId); if(hh){ document.getElementById('hh_line_no').value=hh.line_no; document.getElementById('hh_family_no').value=hh.family_no; document.getElementById('hh_se_id').value=hh.se_id||''; document.getElementById('hh_members').value=hh.members||''; document.getElementById('hh_head_name').value=hh.head_name||''; document.getElementById('hh_gender').value=hh.gender||''; document.getElementById('hh_caste').value=hh.caste||''; document.getElementById('hh_ownership').value=hh.ownership||''; document.getElementById('hh_rooms').value=hh.rooms||''; document.getElementById('hh_couples').value=hh.couples||''; document.getElementById('hh_water').value=hh.water||''; document.getElementById('hh_water_avail').value=hh.water_avail||''; document.getElementById('hh_light').value=hh.light||''; document.getElementById('hh_toilet_avail').value=hh.toilet_avail||''; document.getElementById('hh_toilet_type').value=hh.toilet_type||''; document.getElementById('hh_drainage').value=hh.drainage||''; document.getElementById('hh_bathroom').value=hh.bathroom||''; document.getElementById('hh_lpg').value=hh.lpg||''; document.getElementById('hh_fuel').value=hh.fuel||''; document.getElementById('hh_radio').value=hh.radio||''; document.getElementById('hh_tv').value=hh.tv||''; document.getElementById('hh_internet').value=hh.internet||''; document.getElementById('hh_computer').value=hh.computer||''; document.getElementById('hh_phone').value=hh.phone||''; document.getElementById('hh_twowheeler').value=hh.twowheeler||''; document.getElementById('hh_car').value=hh.car||''; document.getElementById('hh_cereal').value=hh.cereal||''; document.getElementById('hh_mobile').value=hh.mobile||''; document.getElementById('hh_note').value=hh.note||''; return; } } document.getElementById('hh_line_no').value=getNextLineNumber(); document.getElementById('hh_family_no').value=getNextFamilyNumber(ch.institutional==='yes'); document.getElementById('hh_se_id').value=''; ['hh_members','hh_head_name','hh_gender','hh_caste','hh_ownership','hh_rooms','hh_couples','hh_water','hh_water_avail','hh_light','hh_toilet_avail','hh_toilet_type','hh_drainage','hh_bathroom','hh_lpg','hh_fuel','hh_radio','hh_tv','hh_internet','hh_computer','hh_phone','hh_twowheeler','hh_car','hh_cereal','hh_mobile','hh_note'].forEach(id=>{let el=document.getElementById(id); if(el) el.value='';}); }
+// ============================================================
+// HOME ACTIONS
+// ============================================================
+function gotoNewEntry() {
+  currentEditId = null;
+  clearForm();
+  let lineNo = String(appData.nextLineNo).padStart(3,'0');
+  let chNo = String(appData.nextCHNo).padStart(4,'0');
+  let hhNo = String(appData.nextHHNo).padStart(3,'0');
+  document.getElementById('formLineNo').innerText = lineNo;
+  document.getElementById('formCHNo').innerText = chNo;
+  document.getElementById('q1_display').innerText = lineNo;
+  document.getElementById('q3_display').innerText = chNo;
+  document.getElementById('q9_hhno').value = hhNo;
+  showPage('pageHLOForm');
+}
+function gotoUpdation() { showPage('pageUpdation'); }
+function gotoViewSummary() { showPage('pageViewSummary'); }
+function doSync() { pushToFirebase(); }
+function markComplete() { toast('Block marked as complete ✅'); }
 
-function cancelHHForm(){ document.getElementById('formHH').style.display='none'; document.getElementById('viewHH').style.display='block'; currentHHId=null; }
-function saveHousehold(){ let b=data.buildings.find(b=>b.id===currentBuildingId); let ch=b?.census_houses?.find(c=>c.id===currentCHId); if(!ch)return; let head=document.getElementById('hh_head_name').value.trim(); if(!head){alert("मुखिया का नाम चाहिए");return;} let hh={id:currentHHId||(Date.now().toString(36)+Math.random().toString(36).substr(2,4)), line_no:document.getElementById('hh_line_no').value, family_no:document.getElementById('hh_family_no').value, se_id:document.getElementById('hh_se_id').value, head_name:head, gender:document.getElementById('hh_gender').value, caste:document.getElementById('hh_caste').value, members:parseInt(document.getElementById('hh_members').value)||0, ownership:document.getElementById('hh_ownership').value, rooms:parseInt(document.getElementById('hh_rooms').value)||0, couples:parseInt(document.getElementById('hh_couples').value)||0, water:document.getElementById('hh_water').value, water_avail:document.getElementById('hh_water_avail').value, light:document.getElementById('hh_light').value, toilet_avail:document.getElementById('hh_toilet_avail').value, toilet_type:document.getElementById('hh_toilet_type').value, drainage:document.getElementById('hh_drainage').value, bathroom:document.getElementById('hh_bathroom').value, lpg:document.getElementById('hh_lpg').value, fuel:document.getElementById('hh_fuel').value, radio:document.getElementById('hh_radio').value, tv:document.getElementById('hh_tv').value, internet:document.getElementById('hh_internet').value, computer:document.getElementById('hh_computer').value, phone:document.getElementById('hh_phone').value, twowheeler:document.getElementById('hh_twowheeler').value, car:document.getElementById('hh_car').value, cereal:document.getElementById('hh_cereal').value, mobile:document.getElementById('hh_mobile').value, note:document.getElementById('hh_note').value}; if(!ch.households) ch.households=[]; if(currentHHId){ let idx=ch.households.findIndex(h=>h.id===currentHHId); if(idx!==-1) ch.households[idx]=hh; } else { ch.households.push(hh); } saveToLocal(); cancelHHForm(); toast("परिवार सहेजा"); }
-function deleteHousehold(){ if(!currentHHId)return; let b=data.buildings.find(b=>b.id===currentBuildingId); let ch=b?.census_houses?.find(c=>c.id===currentCHId); if(!ch)return; if(confirm("परिवार मिटाएं?")){ ch.households=ch.households.filter(h=>h.id!==currentHHId); currentHHId=null; saveToLocal(); cancelHHForm(); toast("मिटाया गया"); } }
+// ============================================================
+// FORM
+// ============================================================
+function clearForm() {
+  // clear all radio buttons
+  document.querySelectorAll('#pageHLOForm input[type="radio"]').forEach(r=>r.checked=false);
+  // clear text inputs
+  ['q2_building','q10_members','q11_name','q15_rooms','q16_couples','q34_mobile','q_remarks'].forEach(id=>{
+    let el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('sigConfirmCheck') && (document.getElementById('sigConfirmCheck').checked=false);
+}
+function repeatBuilding() {
+  let recs = appData.records;
+  if(recs.length>0) {
+    document.getElementById('q2_building').value = recs[recs.length-1].q2_building || '';
+    toast('Building number repeated');
+  }
+}
+function newBuilding() { document.getElementById('q2_building').value=''; }
+function repeatCH() {
+  let recs = appData.records;
+  if(recs.length>0) {
+    document.getElementById('formCHNo').innerText = recs[recs.length-1].ch_no || String(appData.nextCHNo).padStart(4,'0');
+    document.getElementById('q3_display').innerText = document.getElementById('formCHNo').innerText;
+    toast('CH number repeated');
+  }
+}
+function newCH() {
+  appData.nextCHNo++;
+  let chNo = String(appData.nextCHNo).padStart(4,'0');
+  document.getElementById('formCHNo').innerText = chNo;
+  document.getElementById('q3_display').innerText = chNo;
+}
 
-function renderAnalysis(){ let all=[]; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{(ch.households||[]).forEach(h=>{all.push({...h, b_no:b.building_no, ch_no:ch.ch_no});});});}); let html='<table style="width:100%;border-collapse:collapse;font-size:10px;"><tr style="background:#1e3c72;color:white;"><th>भवन</th><th>मकान</th><th>परि.</th><th>मुखिया</th><th>सदस्य</th><th>जल</th><th>शौचालय</th><th>ईंधन</th></tr>'; all.forEach(h=>{html+=`<tr><td>${h.b_no}</td><td>${h.ch_no}</td><td>${h.family_no}</td><td>${h.head_name||'—'}</td><td>${h.members||0}</td><td>${h.water||'—'}</td><td>${h.toilet_avail||'—'}</td><td>${h.fuel||'—'}</td></tr>`;}); html+='</table>'; document.getElementById('analysisTable').innerHTML=html; document.getElementById('analysisSummary').innerHTML=`<div>कुल परिवार: ${all.length}</div><div>पूर्ण: ${getCompletedHH()}</div><div>लक्ष्य: ${data.config.target||100}</div>`; }
+function getRadioVal(name) {
+  let el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : '';
+}
+function setRadioVal(name, val) {
+  let el = document.querySelector(`input[name="${name}"][value="${val}"]`);
+  if(el) el.checked = true;
+}
 
-function saveConfig(){ data.config={ enumerator:document.getElementById('cfg_name').value, hlb:document.getElementById('cfg_hlb').value, ward:document.getElementById('cfg_ward').value, village:document.getElementById('cfg_village').value, district:document.getElementById('cfg_district').value, target:parseInt(document.getElementById('cfg_target').value)||100 }; saveToLocal(); toast("सेटिंग्स सहेजी"); }
-function loadConfigForm(){ document.getElementById('cfg_name').value=data.config.enumerator||''; document.getElementById('cfg_hlb').value=data.config.hlb||''; document.getElementById('cfg_ward').value=data.config.ward||''; document.getElementById('cfg_village').value=data.config.village||''; document.getElementById('cfg_district').value=data.config.district||''; document.getElementById('cfg_target').value=data.config.target||100; }
+function submitForReview() {
+  let name = document.getElementById('q11_name').value.trim();
+  if(!name) { toast('⚠️ मुखिया का नाम जरूरी है'); return; }
 
-function exportCSV(){ let all=[]; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{(ch.households||[]).forEach(h=>{all.push({भवन:b.building_no, मकान:ch.ch_no, परिवार:h.family_no, मुखिया:h.head_name, सदस्य:h.members, पेयजल:h.water, शौचालय:h.toilet_avail, प्रकाश:h.light, ईंधन:h.fuel, मोबाइल:h.mobile});});});}); if(!all.length){alert("कोई डेटा नहीं");return;} let headers=Object.keys(all[0]); let csv=[headers.join(','), ...all.map(r=>headers.map(h=>JSON.stringify(r[h]||'')).join(','))].join('\n'); downloadBlob(new Blob(["\uFEFF"+csv],{type:'text/csv'}), 'census_data.csv'); }
-function exportExcel(){ let all=[]; data.buildings.forEach(b=>{(b.census_houses||[]).forEach(ch=>{(ch.households||[]).forEach(h=>{all.push({भवन:b.building_no, मकान:ch.ch_no, परिवार:h.family_no, मुखिया:h.head_name, सदस्य:h.members});});});}); if(!all.length){alert("कोई डेटा नहीं");return;} let html='<html><head><meta charset="UTF-8"></head><body><table border="1">'+'<tr>'+Object.keys(all[0]).map(k=>'<th>'+k+'</th>').join('')+'</tr>'+all.map(r=>'<tr>'+Object.values(r).map(v=>'<td>'+v+'</td>').join('')+'</tr>').join('')+'</table></body></html>'; downloadBlob(new Blob([html],{type:'application/vnd.ms-excel'}), 'census_data.xls'); }
-function exportPDF(){ let w=window.open('','_blank'); w.document.write('<html><head><meta charset="UTF-8"><title>जनगणना रिपोर्ट</title></head><body><pre>'+JSON.stringify(data,null,2)+'</pre></body></html>'); w.document.close(); w.print(); }
-function exportJSON(){ downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}), 'census_backup_'+Date.now()+'.json'); }
-function importJSON(input){ let file=input.files[0]; if(!file)return; let r=new FileReader(); r.onload=e=>{try{let d=JSON.parse(e.target.result); if(d.buildings){data=d; saveToLocal(); toast("Restore सफल");}else{alert("गलत फॉर्मेट");}}catch(ex){alert("फाइल error");}}; r.readAsText(file); input.value=''; }
-function clearAllData(){ if(confirm("सभी डेटा मिटाएं?")){data={buildings:[], config:data.config}; saveToLocal(); toast("सभी डेटा मिटा");} }
-async function syncFromFirebase(){ if(!window._fbReady){toast("Firebase configure नहीं");return;} try{let snap=await window._fbGetDocs(window._fbCollection(window._fbDB,'census2027')); snap.forEach(d=>{if(d.id==='main'){data=d.data(); saveToLocal(); toast("Sync complete");}});}catch(e){toast("Sync failed");} }
-async function pushToFirebase(){ if(!window._fbReady){toast("Firebase configure नहीं");return;} try{await window._fbSetDoc(window._fbDoc(window._fbDB,'census2027','main'),data); toast("Push complete");_fbSyncEnabled=true;}catch(e){toast("Push failed");} }
-function downloadBlob(blob,name){ let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),100); }
-function toast(msg){ let t=document.createElement('div'); t.className='toast'; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
+  // Build review
+  let r = collectFormData();
+  let labels = {
+    q2_building:'2. Building number', q3_ch:'3. Census house number',
+    q4:'4. Floor material', q5:'5. Wall material', q6:'6. Roof material',
+    q7:'7. Use of house', q8:'8. Condition', q9_hhno:'9. Household number',
+    q10_members:'10. Total persons', q11_name:'11. Head of household',
+    q12:'12. Sex', q13:'13. SC/ST/Other', q14:'14. Ownership',
+    q15_rooms:'15. Dwelling rooms', q16_couples:'16. Married couples',
+    q17:'17. Drinking water source', q18:'18. Water availability',
+    q19:'19. Lighting source', q20:'20. Access to latrine',
+    q21:'21. Type of latrine', q22:'22. Waste water outlet',
+    q23:'23. Bathing facility', q24:'24. Kitchen/LPG connection',
+    q25:'25. Main fuel cooking', q26:'26. Radio/Transistor',
+    q27:'27. Television', q28:'28. Internet access', q29:'29. Laptop/Computer',
+    q30:'30. Telephone/Mobile', q31:'31. Bicycle/Motorcycle',
+    q32:'32. Car/Jeep/Van', q33:'33. Main cereal',
+    q34_mobile:'34. Mobile Number', q_se:'SE Reference'
+  };
+  let html = '';
+  for(let k in labels) {
+    let v = r[k] || '—';
+    html += `<div class="review-item"><div class="q-label">${labels[k]}</div><div class="q-answer">${v}</div></div>`;
+  }
+  document.getElementById('reviewList').innerHTML = html;
+  showPage('pageReview');
+}
 
-loadFromLocal(); loadConfigForm();
+function collectFormData() {
+  return {
+    id: currentEditId || (Date.now().toString(36)+Math.random().toString(36).substr(2,4)),
+    line_no: document.getElementById('formLineNo').innerText,
+    ch_no: document.getElementById('formCHNo').innerText,
+    q2_building: document.getElementById('q2_building').value,
+    q3_ch: document.getElementById('formCHNo').innerText,
+    q4: getRadioVal('q4'), q5: getRadioVal('q5'), q6: getRadioVal('q6'),
+    q7: getRadioVal('q7'), q8: getRadioVal('q8'),
+    q9_hhno: document.getElementById('q9_hhno').value,
+    q10_members: document.getElementById('q10_members').value,
+    q11_name: document.getElementById('q11_name').value.trim(),
+    q12: getRadioVal('q12'), q13: getRadioVal('q13'), q14: getRadioVal('q14'),
+    q15_rooms: document.getElementById('q15_rooms').value,
+    q16_couples: document.getElementById('q16_couples').value,
+    q17: getRadioVal('q17'), q18: getRadioVal('q18'), q19: getRadioVal('q19'),
+    q20: getRadioVal('q20'), q21: getRadioVal('q21'), q22: getRadioVal('q22'),
+    q23: getRadioVal('q23'), q24: getRadioVal('q24'), q25: getRadioVal('q25'),
+    q26: getRadioVal('q26'), q27: getRadioVal('q27'), q28: getRadioVal('q28'),
+    q29: getRadioVal('q29'), q30: getRadioVal('q30'), q31: getRadioVal('q31'),
+    q32: getRadioVal('q32'), q33: getRadioVal('q33'),
+    q34_mobile: document.getElementById('q34_mobile').value,
+    q_se: getRadioVal('q_se'),
+    q_remarks: document.getElementById('q_remarks').value,
+    status: 'COMPLETE',
+    synced: false,
+    locked: false,
+    timestamp: new Date().toISOString()
+  };
+}
+
+function confirmAndSave() {
+  showPage('pageSignature');
+}
+
+function saveAndSync() {
+  if(!document.getElementById('sigConfirmCheck').checked) {
+    toast('⚠️ Please check confirmation checkbox'); return;
+  }
+  let r = collectFormData();
+  if(currentEditId) {
+    let idx = appData.records.findIndex(x=>x.id===currentEditId);
+    if(idx!==-1) appData.records[idx] = r;
+  } else {
+    appData.records.push(r);
+    appData.nextLineNo++;
+    appData.nextHHNo++;
+  }
+  save();
+  currentEditId = null;
+  clearForm();
+  clearSignature();
+  toast('✅ Data saved successfully!');
+  showPage('pageHome');
+}
+
+function cancelHHForm() { showPage('pageHome'); }
+
+// ============================================================
+// UPDATION LIST
+// ============================================================
+function renderUpdationList() {
+  let el = document.getElementById('updationList');
+  if(!el) return;
+  if(!appData.records.length) { el.innerHTML='<div class="empty-msg">कोई रिकॉर्ड नहीं</div>'; return; }
+  el.innerHTML = appData.records.map(r=>`
+    <div class="hh-item">
+      <div class="hh-line">Line number: ${r.line_no}</div>
+      <div class="hh-detail">Census House Number: ${r.ch_no}</div>
+      <div class="hh-sub">Building Number: ${r.q2_building||'—'}</div>
+      <div class="hh-sub">Household Number: ${r.q9_hhno||'—'}</div>
+      <div class="hh-sub">Name of the head: <strong>${r.q11_name||'—'}</strong></div>
+      <div class="hh-status badge-complete">Status: ${r.status||'—'}</div>
+      <div style="margin-top:8px;display:flex;gap:10px;">
+        <button class="btn btn-outline btn-sm" onclick="editRecord('${r.id}')">✏️ Edit</button>
+        <button class="btn btn-red btn-sm" onclick="deleteRecord('${r.id}')">🗑️ Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderSummaryList() {
+  let el = document.getElementById('summaryHHList');
+  if(!el) return;
+  el.innerHTML = appData.records.map(r=>`
+    <div class="hh-item">
+      <div class="hh-line">Line number ${r.line_no}</div>
+      <div class="hh-detail"><strong>Census House Number:</strong> ${r.ch_no}</div>
+      <div class="hh-sub"><strong>Building Number:</strong> ${r.q2_building||'—'}</div>
+      <div class="hh-sub"><strong>Household Number:</strong> ${r.q9_hhno||'—'}</div>
+      <div class="hh-sub"><strong>Name of the head of the household:</strong> ${r.q11_name||'—'}</div>
+      <div class="hh-status badge-complete">Status: ${r.status||'—'}</div>
+      <button class="view-btn" onclick="viewRecord('${r.id}')">👁</button>
+    </div>`).join('');
+}
+
+function editRecord(id) {
+  let r = appData.records.find(x=>x.id===id);
+  if(!r) return;
+  currentEditId = id;
+  document.getElementById('formLineNo').innerText = r.line_no;
+  document.getElementById('formCHNo').innerText = r.ch_no;
+  document.getElementById('q1_display').innerText = r.line_no;
+  document.getElementById('q3_display').innerText = r.ch_no;
+  document.getElementById('q2_building').value = r.q2_building||'';
+  document.getElementById('q9_hhno').value = r.q9_hhno||'';
+  document.getElementById('q10_members').value = r.q10_members||'';
+  document.getElementById('q11_name').value = r.q11_name||'';
+  document.getElementById('q15_rooms').value = r.q15_rooms||'';
+  document.getElementById('q16_couples').value = r.q16_couples||'';
+  document.getElementById('q34_mobile').value = r.q34_mobile||'';
+  document.getElementById('q_remarks').value = r.q_remarks||'';
+  ['q4','q5','q6','q7','q8','q12','q13','q14','q17','q18','q19','q20','q21','q22','q23','q24','q25','q26','q27','q28','q29','q30','q31','q32','q33','q_se'].forEach(n=>{
+    if(r[n]) setRadioVal(n, r[n]);
+  });
+  showPage('pageHLOForm');
+}
+function viewRecord(id) { editRecord(id); }
+function deleteRecord(id) {
+  if(confirm('Record mita dein?')) {
+    appData.records = appData.records.filter(x=>x.id!==id);
+    save();
+    toast('Record deleted');
+  }
+}
+
+// ============================================================
+// JUMP
+// ============================================================
+function showJumpModal() { document.getElementById('jumpModal').classList.add('show'); }
+function doJump() {
+  let sel = document.getElementById('jumpSelect').value;
+  closeModal('jumpModal');
+  if(sel) {
+    // Find the question block by matching data-q or first element with matching id
+    let el = document.getElementById(sel+'_1') || document.querySelector('[name="'+sel+'"]') || document.getElementById(sel+'_members') || document.getElementById(sel+'_name') || document.getElementById(sel+'_rooms') || document.getElementById(sel+'_hhno') || document.getElementById(sel+'_couples') || document.getElementById(sel+'_building') || document.getElementById(sel+'_mobile');
+    if(el) { el.scrollIntoView({behavior:'smooth', block:'center'}); }
+  }
+}
+
+// ============================================================
+// SIGNATURE
+// ============================================================
+function initSignature() {
+  let canvas = document.getElementById('sigCanvas');
+  if(!canvas) return;
+  let ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); let t=e.touches[0]; let rect=canvas.getBoundingClientRect(); sigDrawing=true; sigLastX=t.clientX-rect.left; sigLastY=t.clientY-rect.top; }, {passive:false});
+  canvas.addEventListener('touchmove', e=>{ e.preventDefault(); if(!sigDrawing) return; let t=e.touches[0]; let rect=canvas.getBoundingClientRect(); let x=t.clientX-rect.left, y=t.clientY-rect.top; ctx.beginPath(); ctx.moveTo(sigLastX,sigLastY); ctx.lineTo(x,y); ctx.stroke(); sigLastX=x; sigLastY=y; document.getElementById('sigPlaceholder').style.display='none'; }, {passive:false});
+  canvas.addEventListener('touchend', ()=>{ sigDrawing=false; });
+  canvas.addEventListener('mousedown', e=>{ sigDrawing=true; let rect=canvas.getBoundingClientRect(); sigLastX=e.clientX-rect.left; sigLastY=e.clientY-rect.top; });
+  canvas.addEventListener('mousemove', e=>{ if(!sigDrawing) return; let rect=canvas.getBoundingClientRect(); let x=e.clientX-rect.left, y=e.clientY-rect.top; ctx.beginPath(); ctx.moveTo(sigLastX,sigLastY); ctx.lineTo(x,y); ctx.stroke(); sigLastX=x; sigLastY=y; document.getElementById('sigPlaceholder').style.display='none'; });
+  canvas.addEventListener('mouseup', ()=>{ sigDrawing=false; });
+}
+function clearSignature() {
+  let canvas = document.getElementById('sigCanvas');
+  if(!canvas) return;
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+  document.getElementById('sigPlaceholder').style.display='block';
+}
+
+// ============================================================
+// ANALYSIS
+// ============================================================
+function renderAnalysis() {
+  let recs = appData.records;
+  if(!recs.length) { document.getElementById('analysisContent').innerHTML='<div class="empty-msg">कोई डेटा नहीं</div>'; return; }
+  let html = `<div style="overflow-x:auto;"><table class="analysis-table">
+    <tr><th>Line</th><th>CH No</th><th>HH No</th><th>मुखिया</th><th>सदस्य</th><th>जल</th><th>शौचालय</th><th>ईंधन</th><th>Status</th></tr>`;
+  recs.forEach(r=>{
+    html+=`<tr><td>${r.line_no}</td><td>${r.ch_no}</td><td>${r.q9_hhno||'—'}</td><td>${r.q11_name||'—'}</td><td>${r.q10_members||'—'}</td><td>${r.q17||'—'}</td><td>${r.q20||'—'}</td><td>${r.q25||'—'}</td><td style="color:var(--green);font-weight:700;">${r.status||'—'}</td></tr>`;
+  });
+  html+='</table></div>';
+  document.getElementById('analysisContent').innerHTML = html;
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function saveConfig() {
+  appData.config = {
+    name: document.getElementById('cfg_name').value,
+    hlb: document.getElementById('cfg_hlb').value,
+    ward: document.getElementById('cfg_ward').value,
+    village: document.getElementById('cfg_village').value,
+    district: document.getElementById('cfg_district').value,
+    target: parseInt(document.getElementById('cfg_target').value)||100
+  };
+  save(); toast('✅ Settings saved');
+}
+function loadConfigForm() {
+  let c = appData.config;
+  ['name','hlb','ward','village','district','target'].forEach(k=>{
+    let el=document.getElementById('cfg_'+k); if(el) el.value=c[k]||'';
+  });
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportCSV() {
+  if(!appData.records.length){toast('कोई डेटा नहीं');return;}
+  let keys = ['line_no','ch_no','q2_building','q9_hhno','q10_members','q11_name','q12','q13','q14','q15_rooms','q16_couples','q17','q18','q19','q20','q21','q22','q23','q24','q25','q26','q27','q28','q29','q30','q31','q32','q33','q34_mobile','q_se','status','timestamp'];
+  let csv = [keys.join(','), ...appData.records.map(r=>keys.map(k=>JSON.stringify(r[k]||'')).join(','))].join('\n');
+  dlBlob(new Blob(['\uFEFF'+csv],{type:'text/csv'}),'census_data.csv');
+}
+function exportExcel() {
+  if(!appData.records.length){toast('कोई डेटा नहीं');return;}
+  let keys = ['line_no','ch_no','q2_building','q9_hhno','q10_members','q11_name','q17','q19','q20','q25','q34_mobile','status'];
+  let html='<html><head><meta charset="UTF-8"></head><body><table border="1"><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr>'+appData.records.map(r=>'<tr>'+keys.map(k=>'<td>'+(r[k]||'')+'</td>').join('')+'</tr>').join('')+'</table></body></html>';
+  dlBlob(new Blob([html],{type:'application/vnd.ms-excel'}),'census_data.xls');
+}
+function exportJSON() { dlBlob(new Blob([JSON.stringify(appData,null,2)],{type:'application/json'}),'census_backup_'+Date.now()+'.json'); }
+function importJSON(input) {
+  let file=input.files[0]; if(!file) return;
+  let r=new FileReader();
+  r.onload=e=>{try{let d=JSON.parse(e.target.result); if(d.records){appData=d; save(); toast('✅ Restore successful');}else{toast('⚠️ Wrong format');}}catch(ex){toast('⚠️ File error');}};
+  r.readAsText(file); input.value='';
+}
+function clearAllData() { if(confirm('सभी डेटा मिटाएं?')){appData.records=[]; appData.nextLineNo=1; appData.nextCHNo=1; appData.nextHHNo=1; save(); toast('All data cleared');} }
+function dlBlob(blob,name){ let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),100); }
+
+// ============================================================
+// FIREBASE
+// ============================================================
+async function syncFromFirebase() {
+  if(!window._fbReady){toast('Firebase not configured');return;}
+  try{let snap=await window._fbGetDocs(window._fbCollection(window._fbDB,'census2027v2')); snap.forEach(d=>{if(d.id==='main'){appData=d.data(); save(); toast('✅ Sync complete');}}); }catch(e){toast('⚠️ Sync failed');}
+}
+async function pushToFirebase() {
+  if(!window._fbReady){toast('Firebase not configured');return;}
+  try{await window._fbSetDoc(window._fbDoc(window._fbDB,'census2027v2','main'),appData); appData.records.forEach(r=>r.synced=true); save(); toast('✅ Push complete');}catch(e){toast('⚠️ Push failed');}
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg) {
+  let t=document.createElement('div'); t.className='toast'; t.innerText=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2500);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+load();
+initSignature();
 </script>
 </body>
 </html>
