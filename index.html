@@ -1499,6 +1499,7 @@ let appData = {
   config: { name: 'प्रगणक', hlb: 'HLB-001', ward: '', village: '', district: '', target: 100 },
   nextLineNo: 1,   // HLB-wide counter
   nextCHNo: 1,     // HLB-wide counter
+  nextHHNo: 1,     // HLB-wide global HH counter (sequential across all buildings/CHs)
 };
 
 // Current form state
@@ -1560,8 +1561,25 @@ function load() {
     }
   }
   if(d) appData = JSON.parse(d);
+  // Backward compat: ensure nextHHNo exists for older saved data
+  if(typeof appData.nextHHNo !== 'number' || appData.nextHHNo < 1) {
+    let maxHH = 0;
+    (appData.buildings||[]).forEach(b => (b.census_houses||[]).forEach(ch =>
+      (ch.households||[]).forEach(hh => {
+        let n = parseInt(hh.family_no);
+        if(!isNaN(n) && n !== 999 && n > maxHH) maxHH = n;
+      })
+    ));
+    appData.nextHHNo = maxHH + 1;
+  }
   refreshStats();
   loadConfigForm();
+}
+
+// Returns the next HLB-wide global HH serial (excluding institutional 999s)
+function getGlobalNextHHNo() {
+  if(typeof appData.nextHHNo !== 'number' || appData.nextHHNo < 1) appData.nextHHNo = 1;
+  return appData.nextHHNo;
 }
 
 // ============================================================
@@ -2142,13 +2160,12 @@ function setupHHForm(editHHId, chDataForNew) {
 }
 
 function getNextHHNoForCH(chData) {
-  // For new CH (not yet saved), HH starts at 001
-  return 1;
+  // HLB-wide global counter — new CH's first HH continues sequence
+  return getGlobalNextHHNo();
 }
 function getNextHHNoForExistingCH(ch) {
-  // count existing normal households
-  let count = (ch.households||[]).filter(hh=>hh.family_no!=='999').length;
-  return count + 1;
+  // HLB-wide global counter — sequential across ALL buildings & CHs
+  return getGlobalNextHHNo();
 }
 
 function showCHDataDisplay(ch, isEdit) {
@@ -2317,6 +2334,10 @@ function saveAndSync() {
       }
     }
     appData.nextLineNo++;
+    // Increment global HH counter (skip institutional 999s — they don't consume the sequence)
+    if(hh.family_no && hh.family_no !== '999') {
+      appData.nextHHNo = (appData.nextHHNo || 1) + 1;
+    }
   }
 
   save();
@@ -2812,7 +2833,12 @@ function exportExcel() {
   let q29L={1:'Yes',2:'No'}; let q30L={1:'Yes',2:'No'}; let q31L={1:'Bicycle',2:'Motorcycle',3:'Both',4:'None'};
   let q32L={1:'Yes',2:'No'}; let q33L={1:'Rice',2:'Wheat',3:'Jowar',4:'Bajra',5:'Maize',6:'Other cereals',7:'No cereal'};
 
-  let lbl = (map, val) => val ? (map[val]||val) : '—';
+  // Show "code - text" in Excel so the option code is also visible alongside the answer
+  let lbl = (map, val) => {
+    if(val === undefined || val === null || val === '') return '—';
+    let txt = map[val];
+    return txt ? (val + ' - ' + txt) : String(val);
+  };
 
   // Sort buildings
   let sortedBuildings = [...buildings].sort((a,b) => {
@@ -2923,10 +2949,25 @@ function importJSON(input) {
   r.readAsText(file); input.value='';
 }
 function clearAllData() {
-  if(confirm('सभी डेटा मिटाएं?')){
-    appData.buildings=[]; appData.nextLineNo=1; appData.nextCHNo=1;
-    save(); toast('All data cleared');
-  }
+  // Two-step confirm — protects against accidental wipe of fieldwork
+  let totalHH = getAllHHs().length;
+  let totalCH = getAllCHs().length;
+  let totalB = (appData.buildings||[]).length;
+  let msg1 = '⚠️ क्या आप वाकई पूरा डेटा मिटाना चाहते हैं?\n\n'
+           + 'Buildings: ' + totalB + '\n'
+           + 'Census Houses: ' + totalCH + '\n'
+           + 'Households: ' + totalHH + '\n\n'
+           + 'यह action UNDO नहीं हो सकती। Backup पहले download कर लें।';
+  if(!confirm(msg1)) return;
+  let typed = prompt('पुष्टि के लिए नीचे CLEAR टाइप करें (capital letters):');
+  if(typed !== 'CLEAR') { toast('❌ Cancelled — डेटा सुरक्षित है'); return; }
+  appData.buildings = [];
+  appData.nextLineNo = 1;
+  appData.nextCHNo  = 1;
+  appData.nextHHNo  = 1;
+  save();
+  toast('✅ सारा डेटा साफ़ हो गया — आप शुरू से शुरू कर सकते हैं');
+  showPage('pageHome');
 }
 function dlBlob(blob,name){ let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),100); }
 
