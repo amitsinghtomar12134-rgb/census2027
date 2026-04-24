@@ -328,114 +328,147 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
       <div class="question-block" style="padding:10px 0;">
         <div class="question-title">2. Building number (Q2)</div>
         <div class="question-hint">Alpha-numeric: 1, A-12, 10/1 etc. — आप खुद भरें</div>
-        <input type="text" class="text-input" id="ch_q2_building" placeholder="e.g. 1, A-12, 10/1">
+        <input type="text" class="text-input" id="ch_q2_building" placeholder="e.g. 1, A-12, 10/1" oninput="onBuildingNoInput()">
         <div style="margin-top:6px;display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="chRepeatBuilding()">Same Building</button>
-          <button class="btn btn-red btn-sm" onclick="chNewBuilding()">New Building</button>
+          <button class="btn btn-outline btn-sm" onclick="chRepeatBuilding()">📋 Same Building</button>
+          <button class="btn btn-red btn-sm" onclick="chNewBuilding()">🆕 New Building</button>
         </div>
       </div>
 
-      <!-- Q3 Census House Number (auto, readonly) -->
-      <div class="question-block" style="padding:10px 0;">
-        <div class="question-title">3. Census House Number (Q3)</div>
-        <div class="question-hint">📌 Auto-generated — HLB-wide sequential 4-digit number (readonly)</div>
-        <input type="text" class="text-input" id="ch_q3_no" readonly placeholder="Auto-generated">
-      </div>
-
-      <!-- Q4 Floor -->
-      <div class="question-block" style="padding:10px 0;" id="ch_q4_block">
-        <div class="question-title">4. Predominant material of Floor</div>
-        <div class="question-hint" id="ch_q4_hint"></div>
-        <div class="radio-group" id="rg_ch_q4">
-          <div class="radio-item"><input type="radio" name="ch_q4" value="1" id="ch_q4_1"><label for="ch_q4_1">1-Mud</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q4" value="2" id="ch_q4_2"><label for="ch_q4_2">2-Wood/bamboo</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q4" value="3" id="ch_q4_3"><label for="ch_q4_3">3-Burnt brick</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q4" value="4" id="ch_q4_4"><label for="ch_q4_4">4-Stone</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q4" value="5" id="ch_q4_5"><label for="ch_q4_5">5-Cement</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q4" value="6" id="ch_q4_6"><label for="ch_q4_6">6-Mosaic/floor tiles</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q4" value="7" id="ch_q4_7"><label for="ch_q4_7">7-Any other</label></div>
+      <!-- MODE SELECTION: Existing CH या New CH -->
+      <div style="background:#f0f4ff;border-radius:10px;padding:12px;margin:6px 0;">
+        <div style="font-size:12px;font-weight:700;color:var(--blue2);margin-bottom:8px;">📌 Q3: इस Building में क्या करना है?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" id="btnModeExisting"
+            onclick="chModeSelect('existing')"
+            style="flex:1;min-width:140px;background:#e8f0fe;border:2px solid #c5d5f5;color:var(--blue2);font-weight:700;">
+            📂 Existing Census House में HH जोड़ें
+          </button>
+          <button class="btn btn-sm" id="btnModeNew"
+            onclick="chModeSelect('new')"
+            style="flex:1;min-width:140px;background:var(--green);color:white;font-weight:700;">
+            ➕ नया Census House बनाएं
+          </button>
         </div>
       </div>
 
-      <!-- Q5 Wall -->
-      <div class="question-block" style="padding:10px 0;" id="ch_q5_block">
-        <div class="question-title">5. Predominant material of Wall</div>
-        <div class="question-hint" id="ch_q5_hint"></div>
-        <div class="radio-group">
-          <div class="radio-item"><input type="radio" name="ch_q5" value="1" id="ch_q5_1"><label for="ch_q5_1">1-Grass/thatch/bamboo etc.</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="2" id="ch_q5_2"><label for="ch_q5_2">2-Plastic/polythene</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="3" id="ch_q5_3"><label for="ch_q5_3">3-Mud/Unburnt brick</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="4" id="ch_q5_4"><label for="ch_q5_4">4-Wood</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="5" id="ch_q5_5"><label for="ch_q5_5">5-Stone not packed with mortar</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="6" id="ch_q5_6"><label for="ch_q5_6">6-Stone packed with mortar</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="7" id="ch_q5_7"><label for="ch_q5_7">7-G.I/metal/asbestos sheets</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="8" id="ch_q5_8"><label for="ch_q5_8">8-Burnt brick</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="9" id="ch_q5_9"><label for="ch_q5_9">9-Concrete</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q5" value="0" id="ch_q5_0"><label for="ch_q5_0">0-Any other</label></div>
+      <!-- ===== EXISTING CH MODE ===== -->
+      <div id="ch_existing_mode_block" style="display:none;">
+        <div class="question-block" style="padding:10px 0;">
+          <div class="question-title">3. Census House चुनें (इस Building का)</div>
+          <div class="question-hint">Building Number डालें → फिर नीचे से CH चुनें</div>
+          <select class="select-input" id="ch_q3_existing_select" style="margin-top:6px;" onchange="onExistingCHSelect()">
+            <option value="">-- पहले Building Number डालें --</option>
+          </select>
+          <div id="existing_ch_info" style="display:none;margin-top:10px;background:#e8f5e9;border:1px solid var(--green);border-radius:8px;padding:10px;font-size:12px;"></div>
         </div>
       </div>
 
-      <!-- Q6 Roof -->
-      <div class="question-block" style="padding:10px 0;" id="ch_q6_block">
-        <div class="question-title">6. Predominant material of Roof</div>
-        <div class="question-hint" id="ch_q6_hint"></div>
-        <div class="radio-group">
-          <div class="radio-item"><input type="radio" name="ch_q6" value="1" id="ch_q6_1"><label for="ch_q6_1">1-Grass/thatch/bamboo etc.</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="2" id="ch_q6_2"><label for="ch_q6_2">2-Plastic/polythene</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="3" id="ch_q6_3"><label for="ch_q6_3">3-Hand made tiles</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="4" id="ch_q6_4"><label for="ch_q6_4">4-Machine made tiles</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="5" id="ch_q6_5"><label for="ch_q6_5">5-Burnt brick</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="6" id="ch_q6_6"><label for="ch_q6_6">6-Stone</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="7" id="ch_q6_7"><label for="ch_q6_7">7-Slate</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="8" id="ch_q6_8"><label for="ch_q6_8">8-G.I/metal/asbestos sheets</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="9" id="ch_q6_9"><label for="ch_q6_9">9-Concrete</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q6" value="0" id="ch_q6_0"><label for="ch_q6_0">0-Any other</label></div>
+      <!-- ===== NEW CH MODE ===== -->
+      <div id="ch_new_mode_block">
+        <!-- Q3 New CH Number (auto, readonly) -->
+        <div class="question-block" style="padding:10px 0;">
+          <div class="question-title">3. Census House Number (Q3) — Auto</div>
+          <div class="question-hint">📌 HLB-wide sequential 4-digit number — auto generated</div>
+          <input type="text" class="text-input" id="ch_q3_no" readonly placeholder="Auto-generated">
         </div>
-      </div>
 
-      <!-- Q7 Use -->
-      <div class="question-block" style="padding:10px 0;">
-        <div class="question-title">7. Ascertain Use of Census House</div>
-        <div class="radio-group">
-          <div class="radio-item"><input type="radio" name="ch_q7" value="1" id="ch_q7_1"><label for="ch_q7_1">1-Residence</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="2" id="ch_q7_2"><label for="ch_q7_2">2-Residence-cum-other use</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="3" id="ch_q7_3"><label for="ch_q7_3">3-Shop/office</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="4" id="ch_q7_4"><label for="ch_q7_4">4-School/college etc.</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="5" id="ch_q7_5"><label for="ch_q7_5">5-Hotel/lodge/guest house etc.</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="6" id="ch_q7_6"><label for="ch_q7_6">6-Hospital/dispensary etc</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="7" id="ch_q7_7"><label for="ch_q7_7">7-Factory/workshop/workshed etc.</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="8" id="ch_q7_8"><label for="ch_q7_8">8-Place of worship</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="9" id="ch_q7_9"><label for="ch_q7_9">9-Other non-residential use</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q7" value="0" id="ch_q7_0"><label for="ch_q7_0">0-Vacant</label></div>
+        <!-- Q4 Floor -->
+        <div class="question-block" style="padding:10px 0;" id="ch_q4_block">
+          <div class="question-title">4. Predominant material of Floor</div>
+          <div class="question-hint" id="ch_q4_hint"></div>
+          <div class="radio-group" id="rg_ch_q4">
+            <div class="radio-item"><input type="radio" name="ch_q4" value="1" id="ch_q4_1"><label for="ch_q4_1">1-Mud</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q4" value="2" id="ch_q4_2"><label for="ch_q4_2">2-Wood/bamboo</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q4" value="3" id="ch_q4_3"><label for="ch_q4_3">3-Burnt brick</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q4" value="4" id="ch_q4_4"><label for="ch_q4_4">4-Stone</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q4" value="5" id="ch_q4_5"><label for="ch_q4_5">5-Cement</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q4" value="6" id="ch_q4_6"><label for="ch_q4_6">6-Mosaic/floor tiles</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q4" value="7" id="ch_q4_7"><label for="ch_q4_7">7-Any other</label></div>
+          </div>
         </div>
-      </div>
 
-      <!-- Q8 Condition -->
-      <div class="question-block" style="padding:10px 0;">
-        <div class="question-title">8. Condition of this census house</div>
-        <div class="radio-group">
-          <div class="radio-item"><input type="radio" name="ch_q8" value="1" id="ch_q8_1"><label for="ch_q8_1">1-Good</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q8" value="2" id="ch_q8_2"><label for="ch_q8_2">2-Livable</label></div>
-          <div class="radio-item"><input type="radio" name="ch_q8" value="3" id="ch_q8_3"><label for="ch_q8_3">3-Dilapidated</label></div>
+        <!-- Q5 Wall -->
+        <div class="question-block" style="padding:10px 0;" id="ch_q5_block">
+          <div class="question-title">5. Predominant material of Wall</div>
+          <div class="question-hint" id="ch_q5_hint"></div>
+          <div class="radio-group">
+            <div class="radio-item"><input type="radio" name="ch_q5" value="1" id="ch_q5_1"><label for="ch_q5_1">1-Grass/thatch/bamboo etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="2" id="ch_q5_2"><label for="ch_q5_2">2-Plastic/polythene</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="3" id="ch_q5_3"><label for="ch_q5_3">3-Mud/Unburnt brick</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="4" id="ch_q5_4"><label for="ch_q5_4">4-Wood</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="5" id="ch_q5_5"><label for="ch_q5_5">5-Stone not packed with mortar</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="6" id="ch_q5_6"><label for="ch_q5_6">6-Stone packed with mortar</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="7" id="ch_q5_7"><label for="ch_q5_7">7-G.I/metal/asbestos sheets</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="8" id="ch_q5_8"><label for="ch_q5_8">8-Burnt brick</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="9" id="ch_q5_9"><label for="ch_q5_9">9-Concrete</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q5" value="0" id="ch_q5_0"><label for="ch_q5_0">0-Any other</label></div>
+          </div>
         </div>
-      </div>
 
-      <!-- Lock / Institutional -->
-      <div class="question-block" style="padding:10px 0;">
-        <div class="question-title">क्या यह Census House बंद (Locked) है?</div>
-        <div class="radio-group" style="flex-direction:row;gap:16px;">
-          <div class="radio-item"><input type="radio" name="ch_locked" value="no" id="ch_locked_no" checked><label for="ch_locked_no">No</label></div>
-          <div class="radio-item"><input type="radio" name="ch_locked" value="yes" id="ch_locked_yes"><label for="ch_locked_yes">🔒 Yes (Locked)</label></div>
+        <!-- Q6 Roof -->
+        <div class="question-block" style="padding:10px 0;" id="ch_q6_block">
+          <div class="question-title">6. Predominant material of Roof</div>
+          <div class="question-hint" id="ch_q6_hint"></div>
+          <div class="radio-group">
+            <div class="radio-item"><input type="radio" name="ch_q6" value="1" id="ch_q6_1"><label for="ch_q6_1">1-Grass/thatch/bamboo etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="2" id="ch_q6_2"><label for="ch_q6_2">2-Plastic/polythene</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="3" id="ch_q6_3"><label for="ch_q6_3">3-Hand made tiles</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="4" id="ch_q6_4"><label for="ch_q6_4">4-Machine made tiles</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="5" id="ch_q6_5"><label for="ch_q6_5">5-Burnt brick</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="6" id="ch_q6_6"><label for="ch_q6_6">6-Stone</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="7" id="ch_q6_7"><label for="ch_q6_7">7-Slate</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="8" id="ch_q6_8"><label for="ch_q6_8">8-G.I/metal/asbestos sheets</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="9" id="ch_q6_9"><label for="ch_q6_9">9-Concrete</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q6" value="0" id="ch_q6_0"><label for="ch_q6_0">0-Any other</label></div>
+          </div>
         </div>
-      </div>
-      <div class="question-block" style="padding:10px 0;">
-        <div class="question-title">क्या यह Institutional (संस्थागत) है?</div>
-        <div class="question-hint">अगर Yes, तो परिवार क्रमांक auto = 999</div>
-        <div class="radio-group" style="flex-direction:row;gap:16px;">
-          <div class="radio-item"><input type="radio" name="ch_institutional" value="no" id="ch_inst_no" checked><label for="ch_inst_no">No</label></div>
-          <div class="radio-item"><input type="radio" name="ch_institutional" value="yes" id="ch_inst_yes"><label for="ch_inst_yes">Yes (Institutional)</label></div>
+
+        <!-- Q7 Use -->
+        <div class="question-block" style="padding:10px 0;" id="ch_q7_block">
+          <div class="question-title">7. Ascertain Use of Census House</div>
+          <div class="radio-group">
+            <div class="radio-item"><input type="radio" name="ch_q7" value="1" id="ch_q7_1"><label for="ch_q7_1">1-Residence</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="2" id="ch_q7_2"><label for="ch_q7_2">2-Residence-cum-other use</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="3" id="ch_q7_3"><label for="ch_q7_3">3-Shop/office</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="4" id="ch_q7_4"><label for="ch_q7_4">4-School/college etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="5" id="ch_q7_5"><label for="ch_q7_5">5-Hotel/lodge/guest house etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="6" id="ch_q7_6"><label for="ch_q7_6">6-Hospital/dispensary etc</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="7" id="ch_q7_7"><label for="ch_q7_7">7-Factory/workshop/workshed etc.</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="8" id="ch_q7_8"><label for="ch_q7_8">8-Place of worship</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="9" id="ch_q7_9"><label for="ch_q7_9">9-Other non-residential use</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q7" value="0" id="ch_q7_0"><label for="ch_q7_0">0-Vacant</label></div>
+          </div>
         </div>
-      </div>
+
+        <!-- Q8 Condition -->
+        <div class="question-block" style="padding:10px 0;" id="ch_q8_block">
+          <div class="question-title">8. Condition of this census house</div>
+          <div class="radio-group">
+            <div class="radio-item"><input type="radio" name="ch_q8" value="1" id="ch_q8_1"><label for="ch_q8_1">1-Good</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q8" value="2" id="ch_q8_2"><label for="ch_q8_2">2-Livable</label></div>
+            <div class="radio-item"><input type="radio" name="ch_q8" value="3" id="ch_q8_3"><label for="ch_q8_3">3-Dilapidated</label></div>
+          </div>
+        </div>
+
+        <!-- Lock / Institutional -->
+        <div class="question-block" style="padding:10px 0;" id="ch_locked_block">
+          <div class="question-title">क्या यह Census House बंद (Locked) है?</div>
+          <div class="radio-group" style="flex-direction:row;gap:16px;">
+            <div class="radio-item"><input type="radio" name="ch_locked" value="no" id="ch_locked_no" checked><label for="ch_locked_no">No</label></div>
+            <div class="radio-item"><input type="radio" name="ch_locked" value="yes" id="ch_locked_yes"><label for="ch_locked_yes">🔒 Yes (Locked)</label></div>
+          </div>
+        </div>
+        <div class="question-block" style="padding:10px 0;" id="ch_inst_block">
+          <div class="question-title">क्या यह Institutional (संस्थागत) है?</div>
+          <div class="question-hint">अगर Yes, तो परिवार क्रमांक auto = 999</div>
+          <div class="radio-group" style="flex-direction:row;gap:16px;">
+            <div class="radio-item"><input type="radio" name="ch_institutional" value="no" id="ch_inst_no" checked><label for="ch_inst_no">No</label></div>
+            <div class="radio-item"><input type="radio" name="ch_institutional" value="yes" id="ch_inst_yes"><label for="ch_inst_yes">Yes (Institutional)</label></div>
+          </div>
+        </div>
+      </div><!-- end ch_new_mode_block -->
+
     </div>
   </div>
 
@@ -1001,6 +1034,8 @@ let isEditMode = false;
 let tempCHData = null;       // CH data collected in step 1 (before save)
 let _lastSavedCHId = null;   // For next action: add HH to same CH
 let _lastSavedBuildingNo = null; // For next action: new CH in same building
+let chFormMode = 'new';      // 'new' | 'existing'
+let selectedExistingCHId = null; // CH selected in existing mode
 
 // SE Mock Data
 const SE_MOCK = {
@@ -1162,31 +1197,177 @@ function markComplete() {
 function clearCHForm() {
   document.querySelectorAll('#pageCHForm input[type="radio"]').forEach(r=>r.checked=false);
   document.getElementById('ch_q2_building').value = '';
-  document.getElementById('ch_q3_no').value = '';
+  let q3el = document.getElementById('ch_q3_no'); if(q3el) q3el.value = '';
   // Set defaults
   document.getElementById('ch_locked_no').checked = true;
   document.getElementById('ch_inst_no').checked = true;
+  // Reset to new CH mode
+  chFormMode = 'new';
+  selectedExistingCHId = null;
+  let existingBlock = document.getElementById('ch_existing_mode_block');
+  let newBlock = document.getElementById('ch_new_mode_block');
+  if(existingBlock) existingBlock.style.display = 'none';
+  if(newBlock) newBlock.style.display = 'block';
+  let btnE = document.getElementById('btnModeExisting');
+  let btnN = document.getElementById('btnModeNew');
+  if(btnE) { btnE.style.background='#e8f0fe'; btnE.style.color='var(--blue2)'; }
+  if(btnN) { btnN.style.background='var(--green)'; btnN.style.color='white'; }
 }
 
 function chRepeatBuilding() {
   let lastB = appData.buildings && appData.buildings.length ? appData.buildings[appData.buildings.length-1] : null;
-  if(lastB) { document.getElementById('ch_q2_building').value = lastB.building_no; toast('Building: ' + lastB.building_no); }
+  if(lastB) {
+    document.getElementById('ch_q2_building').value = lastB.building_no;
+    toast('Building: ' + lastB.building_no);
+    if(chFormMode === 'existing') populateExistingCHDropdown();
+  }
   else toast('कोई पिछली Building नहीं');
 }
 function chNewBuilding() {
   document.getElementById('ch_q2_building').value = '';
   document.getElementById('ch_q2_building').focus();
+  // Reset to new mode
+  chModeSelect('new');
   toast('नया Building number डालें');
 }
 
+// ============================================================
+// CH FORM MODE: Existing CH vs New CH
+// ============================================================
+function chModeSelect(mode) {
+  chFormMode = mode;
+  let existingBlock = document.getElementById('ch_existing_mode_block');
+  let newBlock = document.getElementById('ch_new_mode_block');
+  let btnExisting = document.getElementById('btnModeExisting');
+  let btnNew = document.getElementById('btnModeNew');
+
+  if(mode === 'existing') {
+    existingBlock.style.display = 'block';
+    newBlock.style.display = 'none';
+    if(btnExisting) { btnExisting.style.background='var(--blue2)'; btnExisting.style.color='white'; }
+    if(btnNew) { btnNew.style.background='#e8f0fe'; btnNew.style.color='var(--blue2)'; }
+    populateExistingCHDropdown();
+  } else {
+    existingBlock.style.display = 'none';
+    newBlock.style.display = 'block';
+    selectedExistingCHId = null;
+    if(btnNew) { btnNew.style.background='var(--green)'; btnNew.style.color='white'; }
+    if(btnExisting) { btnExisting.style.background='#e8f0fe'; btnExisting.style.color='var(--blue2)'; }
+  }
+}
+
+function onBuildingNoInput() {
+  // When building number changes, refresh existing CH dropdown
+  if(chFormMode === 'existing') populateExistingCHDropdown();
+}
+
+function populateExistingCHDropdown() {
+  let buildingNo = (document.getElementById('ch_q2_building').value || '').trim();
+  let select = document.getElementById('ch_q3_existing_select');
+  let infoDiv = document.getElementById('existing_ch_info');
+  if(!select) return;
+  select.innerHTML = '';
+  infoDiv.style.display = 'none';
+  selectedExistingCHId = null;
+
+  if(!buildingNo) {
+    select.innerHTML = '<option value="">-- पहले Building Number डालें --</option>';
+    return;
+  }
+
+  let building = appData.buildings.find(b => b.building_no === buildingNo);
+  if(!building || !building.census_houses || !building.census_houses.length) {
+    select.innerHTML = '<option value="">इस Building में अभी कोई CH नहीं है</option>';
+    return;
+  }
+
+  let opt0 = document.createElement('option');
+  opt0.value = ''; opt0.textContent = '-- Census House चुनें --';
+  select.appendChild(opt0);
+
+  building.census_houses.forEach(ch => {
+    let opt = document.createElement('option');
+    opt.value = ch.id;
+    let hhCount = (ch.households||[]).length;
+    let statusTxt = ch.locked ? '🔒 Locked' : (ch.q7==='0' ? '🚪 Vacant' : `${hhCount} HH`);
+    opt.textContent = `CH No: ${ch.ch_no}  |  Q7: ${ch.q7||'—'}  |  ${statusTxt}`;
+    if(ch.locked || ch.q7==='0') { opt.disabled = true; opt.textContent += '  (HH नहीं जोड़ सकते)'; }
+    select.appendChild(opt);
+  });
+}
+
+function onExistingCHSelect() {
+  let select = document.getElementById('ch_q3_existing_select');
+  let chId = select.value;
+  let infoDiv = document.getElementById('existing_ch_info');
+  if(!chId) { infoDiv.style.display='none'; selectedExistingCHId=null; return; }
+
+  let found = findCH(chId);
+  if(!found) return;
+  let ch = found.ch;
+  selectedExistingCHId = chId;
+
+  let hhCount = (ch.households||[]).length;
+  let nextHH = ch.institutional ? 999 : getNextHHNoForExistingCH(ch);
+  let hhNoDisplay = ch.institutional ? '999' : pad3(nextHH);
+
+  let q7Labels = {'1':'Residence','2':'Res-cum-other','3':'Shop/office','4':'School','5':'Hotel','6':'Hospital','7':'Factory','8':'Worship','9':'Non-residential','0':'Vacant'};
+  let q8Labels = {'1':'Good','2':'Livable','3':'Dilapidated'};
+
+  infoDiv.style.display = 'block';
+  infoDiv.innerHTML = `
+    <div style="font-weight:700;color:var(--green);margin-bottom:6px;">✅ CH ${ch.ch_no} चुना गया</div>
+    <div style="line-height:1.8;">
+      <b>Q4 Floor:</b> ${ch.q4||'—'} &nbsp;|&nbsp; <b>Q5 Wall:</b> ${ch.q5||'—'} &nbsp;|&nbsp; <b>Q6 Roof:</b> ${ch.q6||'—'}<br>
+      <b>Q7 Use:</b> ${ch.q7||'—'} (${q7Labels[ch.q7]||'—'}) &nbsp;|&nbsp; <b>Q8:</b> ${ch.q8||'—'} (${q8Labels[ch.q8]||'—'})<br>
+      <b>मौजूदा HH:</b> ${hhCount} &nbsp;|&nbsp; <b>अगला HH No:</b> <span style="color:var(--blue2);font-weight:700;">${hhNoDisplay}</span>
+    </div>
+  `;
+}
+
+
+
 function saveCHAndGotoHH() {
+
+  // ── EXISTING CH MODE ─────────────────────────────────────
+  if(chFormMode === 'existing') {
+    if(!selectedExistingCHId) { toast('⚠️ एक Census House चुनें'); return; }
+    let found = findCH(selectedExistingCHId);
+    if(!found) { toast('⚠️ CH नहीं मिला'); return; }
+    let ch = found.ch;
+    if(ch.locked) { toast('🔒 Locked CH में HH add नहीं हो सकता'); return; }
+    if(ch.q7==='0') { toast('❌ Vacant CH में HH add नहीं हो सकता'); return; }
+
+    currentCHId = selectedExistingCHId;
+    currentBuildingId = found.building.id;
+    tempCHData = null;
+    isEditMode = false;
+    currentHHId = null;
+    clearHHForm();
+
+    let lineNo = pad3(appData.nextLineNo);
+    let nextHH = getNextHHNoForExistingCH(ch);
+    let hhNo = ch.institutional ? '999' : pad3(nextHH);
+
+    document.getElementById('formLineNo').innerText = lineNo;
+    document.getElementById('q1_display').innerText = lineNo;
+    document.getElementById('formCHNo').innerText = ch.ch_no;
+    document.getElementById('q3_display').innerText = ch.ch_no;
+    document.getElementById('formHHNo').innerText = hhNo;
+    document.getElementById('q3_building_info').innerText = found.building.building_no;
+    document.getElementById('q9_hhno').value = hhNo;
+    showCHDataDisplay(ch, false);
+    showPage('pageHLOForm');
+    return;
+  }
+
+  // ── NEW CH MODE ──────────────────────────────────────────
   let q7 = getRadioVal('ch_q7');
   if(!q7) { toast('⚠️ Q7 (Use of Census House) जरूरी है'); return; }
 
   let locked = document.querySelector('input[name="ch_locked"]:checked')?.value === 'yes';
   let institutional = document.querySelector('input[name="ch_institutional"]:checked')?.value === 'yes';
 
-  // Q4-6 required only for first HH of this CH (i.e., new CH)
   let q4 = getRadioVal('ch_q4'), q5 = getRadioVal('ch_q5'), q6 = getRadioVal('ch_q6');
 
   tempCHData = {
@@ -1527,9 +1708,11 @@ function nextActionSameBuilding() {
   let bn = _lastSavedBuildingNo || '';
   if(bn) document.getElementById('ch_q2_building').value = bn;
   let chNo = pad4(appData.nextCHNo);
+  let q3el = document.getElementById('ch_q3_no'); if(q3el) q3el.value = chNo;
   document.getElementById('chFormCHNo').innerText = chNo;
-  document.getElementById('ch_q3_no').value = chNo;
   document.getElementById('chFormMode').innerText = '(Same Building, New CH)';
+  // Start in "new CH" mode
+  chModeSelect('new');
   showPage('pageCHForm');
 }
 
