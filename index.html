@@ -335,6 +335,13 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
         </div>
       </div>
 
+      <!-- Q3 Census House Number (auto, readonly) -->
+      <div class="question-block" style="padding:10px 0;">
+        <div class="question-title">3. Census House Number (Q3)</div>
+        <div class="question-hint">📌 Auto-generated — HLB-wide sequential 4-digit number (readonly)</div>
+        <input type="text" class="text-input" id="ch_q3_no" readonly placeholder="Auto-generated">
+      </div>
+
       <!-- Q4 Floor -->
       <div class="question-block" style="padding:10px 0;" id="ch_q4_block">
         <div class="question-title">4. Predominant material of Floor</div>
@@ -475,22 +482,11 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
 
     <div class="card-section-label">Head of Household Particulars</div>
 
-    <!-- SE ID -->
+    <!-- SE ID (Reference Only - No fetch) -->
     <div class="question-block" id="q_se_block">
       <div class="question-title">SE Reference (Self-Enumeration)</div>
-      <div class="question-hint">SE ID डालने पर data auto-fetch होगा (mock)</div>
-      <div class="se-fetch-row">
-        <input type="text" class="text-input" id="se_id_input" placeholder="SE ID डालें (जैसे SE001)">
-        <button class="btn btn-blue btn-sm" onclick="fetchSEData()">Fetch →</button>
-      </div>
-      <div class="se-data-preview" id="sePreview">
-        <div style="font-weight:700;color:var(--green);margin-bottom:4px;">✅ SE Data मिला — Review करें:</div>
-        <div id="sePreviewContent"></div>
-        <div style="margin-top:6px;display:flex;gap:8px;">
-          <button class="btn btn-green btn-sm" onclick="acceptSEData()">Accept ✓</button>
-          <button class="btn btn-outline btn-sm" onclick="clearSEData()">Clear ✗</button>
-        </div>
-      </div>
+      <div class="question-hint">⚠️ सिर्फ Reference के लिए — कोई auto-fetch नहीं होगा। अगर परिवार ने SE की है तो उनका ID यहाँ नोट करें (Optional)</div>
+      <input type="text" class="text-input" id="se_id_input" placeholder="SE ID डालें (Optional)">
     </div>
 
     <!-- Q9 Household Number (auto, readonly) -->
@@ -950,6 +946,37 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
   </div>
 </div>
 
+<!-- ==================== PAGE: NEXT ACTION ==================== -->
+<div id="pageNextAction" class="page">
+  <div class="app-header">
+    <h2>✅ Data Saved!</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content" style="padding-top:20px;">
+    <div style="text-align:center;padding:20px 0 16px;">
+      <div style="font-size:56px;margin-bottom:8px;">✅</div>
+      <div style="font-size:17px;font-weight:700;color:var(--green);margin-bottom:4px;">Record Successfully Saved!</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;" id="nextActionInfo">—</div>
+    </div>
+    <div style="background:white;border-radius:14px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+      <div style="font-size:13px;font-weight:700;color:var(--blue2);margin-bottom:14px;text-align:center;">आगे क्या करना है? (What's next?)</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-green" id="btnNextSameCHHH" onclick="nextActionSameCH()" style="font-size:13px;padding:12px 20px;">
+          ➕ Same Census House में और HH जोड़ें
+          <div style="font-size:10px;font-weight:400;opacity:0.9;margin-top:2px;" id="nextSameCHHint">उसी CH में दूसरा परिवार</div>
+        </button>
+        <button class="btn btn-blue" id="btnNextSameBuildCH" onclick="nextActionSameBuilding()" style="font-size:13px;padding:12px 20px;">
+          🏗️ Same Building में नया Census House
+          <div style="font-size:10px;font-weight:400;opacity:0.9;margin-top:2px;">उसी Building में नया CH number</div>
+        </button>
+        <button class="btn btn-outline" onclick="showPage('pageHome')" style="font-size:13px;padding:12px 20px;">
+          🏠 Home पर जाएं
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // DATA STRUCTURE — Book ke anusar (Building → CH → HH)
@@ -972,6 +999,8 @@ let currentHHId = null;     // HH being edited
 let currentBuildingId = null; // Building context
 let isEditMode = false;
 let tempCHData = null;       // CH data collected in step 1 (before save)
+let _lastSavedCHId = null;   // For next action: add HH to same CH
+let _lastSavedBuildingNo = null; // For next action: new CH in same building
 
 // SE Mock Data
 const SE_MOCK = {
@@ -1112,6 +1141,7 @@ function gotoNewEntry() {
   if(lastB) document.getElementById('ch_q2_building').value = lastB.building_no;
   let chNo = pad4(appData.nextCHNo);
   document.getElementById('chFormCHNo').innerText = chNo;
+  document.getElementById('ch_q3_no').value = chNo;
   document.getElementById('chFormMode').innerText = '(New Entry)';
   showPage('pageCHForm');
 }
@@ -1132,6 +1162,7 @@ function markComplete() {
 function clearCHForm() {
   document.querySelectorAll('#pageCHForm input[type="radio"]').forEach(r=>r.checked=false);
   document.getElementById('ch_q2_building').value = '';
+  document.getElementById('ch_q3_no').value = '';
   // Set defaults
   document.getElementById('ch_locked_no').checked = true;
   document.getElementById('ch_inst_no').checked = true;
@@ -1169,14 +1200,17 @@ function saveCHAndGotoHH() {
   };
 
   if(locked) {
-    // Locked: save CH with no households, go home
+    // Locked: save CH with no households, go to next action
     let chId = 'ch_' + Date.now().toString(36);
     let ch = { id: chId, ...tempCHData };
     saveNewCHToBuilding(ch, tempCHData.building_no);
     appData.nextCHNo++;
     save();
     toast('🔒 Locked CH saved (no HH added)');
-    showPage('pageHome');
+    _lastSavedCHId = chId;
+    _lastSavedBuildingNo = tempCHData.building_no;
+    // For locked CH: disable "same CH" option on next action page
+    showNextActionPage(chId, tempCHData.building_no, false, true);
     return;
   }
 
@@ -1283,8 +1317,7 @@ function clearHHForm() {
   ['q10_members','q11_name','q15_rooms','q16_couples','q34_mobile','q_remarks'].forEach(id=>{
     let el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('se_id_input').value='';
-  document.getElementById('sePreview').classList.remove('show');
+  let seEl = document.getElementById('se_id_input'); if(seEl) seEl.value='';
   document.getElementById('chDataDisplay').style.display='none';
 }
 
@@ -1301,40 +1334,8 @@ function getRadioVal(name) { let el=document.querySelector(`input[name="${name}"
 function setRadioVal(name,val) { let el=document.querySelector(`input[name="${name}"][value="${val}"]`); if(el) el.checked=true; }
 
 // ============================================================
-// SE ID FETCH
+// SE ID — Reference only (no auto-fetch from server)
 // ============================================================
-function fetchSEData() {
-  let id = document.getElementById('se_id_input').value.trim().toUpperCase();
-  if(!id) { toast('SE ID डालें'); return; }
-  let data = SE_MOCK[id];
-  if(!data) { toast('⚠️ SE ID नहीं मिला: ' + id); return; }
-  let html = Object.entries({
-    'Members':data.q10_members, 'Name':data.q11_name, 'Water':data.q17,
-    'Latrine':data.q20, 'Fuel':data.q25, 'Mobile':data.q34_mobile
-  }).map(([k,v])=>`<span style="margin-right:10px;"><strong>${k}:</strong>${v}</span>`).join('');
-  document.getElementById('sePreviewContent').innerHTML = html;
-  document.getElementById('sePreview').classList.add('show');
-  window._seData = data;
-}
-function acceptSEData() {
-  let d = window._seData;
-  if(!d) return;
-  if(d.q10_members) document.getElementById('q10_members').value = d.q10_members;
-  if(d.q11_name) document.getElementById('q11_name').value = d.q11_name;
-  if(d.q34_mobile) document.getElementById('q34_mobile').value = d.q34_mobile;
-  ['q12','q13','q14','q17','q18','q19','q20','q21','q22','q23','q24','q25','q26','q27','q28','q29','q30','q31','q32','q33','q15_rooms','q16_couples'].forEach(n=>{
-    if(d[n]) setRadioVal(n,d[n]);
-  });
-  if(d.q15_rooms) document.getElementById('q15_rooms').value = d.q15_rooms;
-  if(d.q16_couples) document.getElementById('q16_couples').value = d.q16_couples;
-  document.getElementById('sePreview').classList.remove('show');
-  toast('✅ SE Data accepted & filled');
-}
-function clearSEData() {
-  window._seData = null;
-  document.getElementById('se_id_input').value = '';
-  document.getElementById('sePreview').classList.remove('show');
-}
 
 // ============================================================
 // SUBMIT FOR REVIEW
@@ -1412,12 +1413,20 @@ function saveAndSync() {
 
   let hh = collectHHFormData();
 
+  let savedCHId = null;
+  let savedBuildingNo = '—';
+  let isVacant = false, isLocked = false;
+
   if(currentHHId) {
     // Edit existing HH
     let found = findHH(currentHHId);
     if(found) {
       let idx = found.ch.households.findIndex(x=>x.id===currentHHId);
       if(idx!==-1) found.ch.households[idx] = hh;
+      savedCHId = found.ch.id;
+      savedBuildingNo = found.building.building_no;
+      isVacant = found.ch.q7 === '0';
+      isLocked = found.ch.locked;
     }
   } else {
     // New HH
@@ -1427,15 +1436,22 @@ function saveAndSync() {
       let ch = { id: chId, ...tempCHData, households: [hh] };
       saveNewCHToBuilding(ch, tempCHData.building_no);
       appData.nextCHNo++;
+      savedCHId = chId;
+      savedBuildingNo = tempCHData.building_no;
+      isVacant = tempCHData.q7 === '0';
+      isLocked = tempCHData.locked;
     } else if(currentCHId) {
       // Adding HH to existing CH
       let found = findCH(currentCHId);
       if(found) {
         let ch = found.ch;
-        // Update HH number for additional HH
         let nextHH = getNextHHNoForExistingCH(ch);
         hh.family_no = ch.institutional ? '999' : pad3(nextHH);
         ch.households.push(hh);
+        savedCHId = ch.id;
+        savedBuildingNo = found.building.building_no;
+        isVacant = ch.q7 === '0';
+        isLocked = ch.locked;
       }
     }
     appData.nextLineNo++;
@@ -1450,17 +1466,80 @@ function saveAndSync() {
   clearCHForm();
   clearSignature();
   toast('✅ Data saved successfully!');
-  showPage('pageHome');
+  showNextActionPage(savedCHId, savedBuildingNo, isVacant, isLocked);
 }
 
 // ============================================================
-// ADD HH TO EXISTING CH (from hierarchy tree)
+// NEXT ACTION PAGE
 // ============================================================
+function showNextActionPage(chId, buildingNo, isVacant, isLocked) {
+  _lastSavedCHId = chId;
+  _lastSavedBuildingNo = buildingNo;
+  // Info display
+  let found = chId ? findCH(chId) : null;
+  let chNo = found ? found.ch.ch_no : '—';
+  let hhCount = found ? (found.ch.households||[]).length : 0;
+  document.getElementById('nextActionInfo').innerText = `CH No: ${chNo} | Building: ${buildingNo} | HH Saved: ${hhCount}`;
+  // Disable "same CH" button for vacant/locked CH
+  let sameCHBtn = document.getElementById('btnNextSameCHHH');
+  let sameCHHint = document.getElementById('nextSameCHHint');
+  if(sameCHBtn) {
+    if(isVacant) { sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.4'; if(sameCHHint) sameCHHint.innerText='❌ Vacant CH — HH add नहीं होगा'; }
+    else if(isLocked) { sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.4'; if(sameCHHint) sameCHHint.innerText='🔒 Locked CH — HH add नहीं होगा'; }
+    else { sameCHBtn.disabled=false; sameCHBtn.style.opacity='1'; if(sameCHHint) sameCHHint.innerText='उसी CH में दूसरा परिवार'; }
+  }
+  showPage('pageNextAction');
+}
+
+function nextActionSameCH() {
+  if(!_lastSavedCHId) { showPage('pageHome'); return; }
+  let found = findCH(_lastSavedCHId);
+  if(!found) { showPage('pageHome'); return; }
+  let ch = found.ch;
+  if(ch.locked) { toast('🔒 Locked CH में HH add नहीं हो सकता'); return; }
+  if(ch.q7 === '0') { toast('❌ Vacant CH में HH add नहीं हो सकता'); return; }
+  currentCHId = _lastSavedCHId;
+  currentBuildingId = found.building.id;
+  tempCHData = null;
+  isEditMode = false;
+  currentHHId = null;
+  clearHHForm();
+  let lineNo = pad3(appData.nextLineNo);
+  let nextHH = getNextHHNoForExistingCH(ch);
+  let hhNo = ch.institutional ? '999' : pad3(nextHH);
+  document.getElementById('formLineNo').innerText = lineNo;
+  document.getElementById('q1_display').innerText = lineNo;
+  document.getElementById('formCHNo').innerText = ch.ch_no;
+  document.getElementById('q3_display').innerText = ch.ch_no;
+  document.getElementById('formHHNo').innerText = hhNo;
+  document.getElementById('q3_building_info').innerText = found.building.building_no;
+  document.getElementById('q9_hhno').value = hhNo;
+  showCHDataDisplay(ch, false);
+  showPage('pageHLOForm');
+}
+
+function nextActionSameBuilding() {
+  isEditMode = false;
+  currentCHId = null;
+  currentHHId = null;
+  tempCHData = null;
+  clearCHForm();
+  let bn = _lastSavedBuildingNo || '';
+  if(bn) document.getElementById('ch_q2_building').value = bn;
+  let chNo = pad4(appData.nextCHNo);
+  document.getElementById('chFormCHNo').innerText = chNo;
+  document.getElementById('ch_q3_no').value = chNo;
+  document.getElementById('chFormMode').innerText = '(Same Building, New CH)';
+  showPage('pageCHForm');
+}
+
+
 function promptAddHHToCH(chId) {
   let found = findCH(chId);
   if(!found) return;
   let ch = found.ch;
   if(ch.locked) { toast('🔒 Locked CH में HH add नहीं हो सकता'); return; }
+  if(ch.q7 === '0') { toast('❌ Vacant CH में HH add नहीं हो सकता'); return; }
   currentCHId = chId;
   currentBuildingId = found.building.id;
   tempCHData = null;
@@ -1535,11 +1614,15 @@ function renderHierarchyTree() {
       <div id="btree_${b.id}">`;
     (b.census_houses||[]).forEach(ch => {
       let badge = ch.locked ? '<span class="ch-badge badge-locked">🔒 Locked</span>' : ch.institutional ? '<span class="ch-badge badge-inst">Institutional</span>' : '<span class="ch-badge badge-normal">Normal</span>';
+      let canAddHH = !ch.locked && ch.q7 !== '0';
+      let addHHBtn = canAddHH
+        ? `<button class="btn btn-outline btn-sm" onclick="promptAddHHToCH('${ch.id}')">+HH</button>`
+        : (ch.q7==='0' ? '<span style="font-size:10px;color:var(--muted);padding:4px 6px;border:1px dashed #ccc;border-radius:8px;">Vacant</span>' : '');
       html += `<div class="ch-item">
         <div class="ch-header">
           <h5>🏠 CH No: ${ch.ch_no} ${badge}</h5>
-          <div style="display:flex;gap:6px;">
-            ${!ch.locked?`<button class="btn btn-outline btn-sm" onclick="promptAddHHToCH('${ch.id}')">+HH</button>`:''}
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${addHHBtn}
             <button class="btn btn-red btn-sm" onclick="deleteCH('${ch.id}')">🗑</button>
           </div>
         </div>
