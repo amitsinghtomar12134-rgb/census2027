@@ -2064,37 +2064,41 @@ function saveCHAndGotoHH() {
     households: []
   };
 
-  // ── NON-RESIDENTIAL (Q7 = 3–9) or VACANT (Q7 = 0): No HH ──
+  // ── NON-RESIDENTIAL (Q7 = 3–9) or VACANT (Q7 = 0): No HH, but assign line_no ──
   if(!['1','2'].includes(q7)) {
     // For Q7=3-9: Actual Use Description is required
     if(['3','4','5','6','7','8','9'].includes(q7)) {
       if(!actual_use_desc) { toast('⚠️ Actual Use Description जरूरी है (Q7='+q7+' Non-residential)'); document.getElementById('ch_actual_use_desc')?.focus(); return; }
     }
+    let lineNo = pad3(appData.nextLineNo);  // assign global line number
     let chId = 'ch_' + Date.now().toString(36);
-    let ch = { id: chId, ...tempCHData };
+    let ch = { id: chId, ...tempCHData, line_no: lineNo };
     saveNewCHToBuilding(ch, buildingInput);
     appData.nextCHNo++;
-    // ✅ DO NOT increment nextLineNo or nextHHNo — no HH added
+    appData.nextLineNo++;  // ✅ increment line number (CH is listed, even without HH)
+    // nextHHNo NOT incremented — no HH added
     save();
     let isVacant = (q7 === '0');
-    toast(isVacant ? '🚪 Vacant CH saved — कोई Household नहीं' : '🏢 Non-residential CH saved — कोई Household नहीं');
+    toast(isVacant ? '🚪 Vacant CH saved (Line: '+lineNo+')' : '🏢 Non-residential CH saved (Line: '+lineNo+')');
     _lastSavedCHId = chId;
     _lastSavedBuildingNo = buildingInput;
     showNextActionPage(chId, buildingInput, isVacant, false);
     return;
   }
 
-  // ── LOCKED (Q7=1 or 2 + Locked=yes): No HH ──
+  // ── LOCKED (Q7=1 or 2 + Locked=yes): No HH, but assign line_no ──
   if(locked) {
     // For Q7=2 locked: Actual Use Description required
     if(q7 === '2' && !actual_use_desc) { toast('⚠️ Actual Use Description जरूरी है (Q7=2)'); document.getElementById('ch_actual_use_desc')?.focus(); return; }
+    let lineNo = pad3(appData.nextLineNo);  // assign global line number
     let chId = 'ch_' + Date.now().toString(36);
-    let ch = { id: chId, ...tempCHData };
+    let ch = { id: chId, ...tempCHData, line_no: lineNo };
     saveNewCHToBuilding(ch, tempCHData.building_no);
     appData.nextCHNo++;
-    // ✅ DO NOT increment nextLineNo or nextHHNo — no HH added
+    appData.nextLineNo++;  // ✅ increment line number
+    // nextHHNo NOT incremented — no HH added
     save();
-    toast('🔒 Locked CH saved — कोई Household नहीं जोड़ा जाएगा');
+    toast('🔒 Locked CH saved (Line: '+lineNo+') — कोई Household नहीं');
     _lastSavedCHId = chId;
     _lastSavedBuildingNo = tempCHData.building_no;
     showNextActionPage(chId, tempCHData.building_no, false, true);
@@ -2659,7 +2663,7 @@ function renderUpdationList() {
       let statusBg = isLocked ? '#555' : isVacant ? '#888' : isNonRes ? '#e67e22' : '#f39c12';
       let actualUse = ch.actual_use_desc ? `<div class="hh-sub">उपयोग: ${ch.actual_use_desc}</div>` : '';
       return `<div class="hh-item" style="border-left:3px solid ${borderColor};background:#fafafa;">
-        <div class="hh-line">Line: <b>—</b> &nbsp;|&nbsp; CH: <b>${ch.ch_no}</b> &nbsp;|&nbsp; Building: <b>${ch.building_no}</b> &nbsp;|&nbsp; HH No: <b>—</b></div>
+        <div class="hh-line">Line: <b>${ch.line_no||'—'}</b> &nbsp;|&nbsp; CH: <b>${ch.ch_no}</b> &nbsp;|&nbsp; Building: <b>${ch.building_no}</b> &nbsp;|&nbsp; HH No: <b>—</b></div>
         <div class="hh-detail" style="color:#555;">— (${q7Lbl})</div>
         <div class="hh-sub">Q7: ${q7} (${q7Lbl})</div>
         ${actualUse}
