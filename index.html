@@ -487,6 +487,85 @@ canvas#sigCanvas {
   padding: 10px 0 8px;
   color: var(--hlo-text);
 }
+
+/* ---- HLO Wizard Screens (one question per screen, like real HLO app) ---- */
+.hlo-screen { display: none; }
+.hlo-screen.active { display: block; animation: hloScreenIn 0.18s ease; }
+@keyframes hloScreenIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Progress bar */
+.hlo-progress-wrap {
+  background: white;
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid #ececf2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--hlo-muted);
+  font-weight: 700;
+}
+.hlo-progress-track {
+  flex: 1;
+  height: 6px;
+  background: #eef0f8;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.hlo-progress-fill {
+  height: 100%;
+  background: var(--hlo-blue);
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.25s ease;
+}
+.hlo-progress-text {
+  flex-shrink: 0;
+  letter-spacing: 0.4px;
+  color: var(--hlo-blue2);
+}
+
+/* Per-screen identification mini bar (real-app style: shows on every screen) */
+.hlo-id-strip {
+  background: #f8f8fc;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hlo-id-strip b { color: var(--hlo-blue2); }
+
+/* CH-data banner inside screens (compact) */
+#chDataDisplay {
+  background: #f0f4ff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  color: #333;
+}
+
+/* Required field star */
+.req-star { color: var(--hlo-red); font-weight: 800; margin-left: 2px; }
+
+/* Validation flash (highlight missing screen) */
+.hlo-screen.invalid .question-block {
+  border: 1.5px solid var(--hlo-red);
+  animation: invalidShake 0.35s ease;
+}
+@keyframes invalidShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
 </style>
 </head>
 <body>
@@ -798,10 +877,10 @@ canvas#sigCanvas {
   </div>
 </div>
 
-<!-- ==================== PAGE: HLO DATA FORM (HOUSEHOLD) ==================== -->
+<!-- ==================== PAGE: HLO DATA FORM (HOUSEHOLD) — Wizard ==================== -->
 <div id="pageHLOForm" class="page">
   <div class="app-header">
-    <button class="back-btn" onclick="backFromHHForm()">←</button>
+    <button class="back-btn" onclick="hloPrev()">←</button>
     <h2>HLO Data</h2>
     <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
   </div>
@@ -811,352 +890,425 @@ canvas#sigCanvas {
     <span>CH No: <span id="formCHNo">0001</span></span>
     <span>HH No: <span id="formHHNo">001</span></span>
   </div>
+  <div class="hlo-progress-wrap">
+    <div class="hlo-progress-track"><div class="hlo-progress-fill" id="hloProgressFill"></div></div>
+    <span class="hlo-progress-text" id="hloProgressText">1 / 22</span>
+  </div>
 
   <div class="content page-content-padded" id="formQuestions">
 
-    <div class="card-section-label">Identification</div>
-
-    <!-- Q1 Line No (display only) -->
-    <div class="question-block">
-      <div class="question-title">1. Line number &nbsp;<span id="q1_display" style="color:var(--blue2);font-size:18px;"></span></div>
-    </div>
-    <!-- Q3 CH No (display only) -->
-    <div class="question-block">
-      <div class="question-title">3. Census house number &nbsp;<span id="q3_display" style="color:var(--blue2);font-size:18px;"></span></div>
-      <div style="font-size:11px;color:var(--muted);">Building: <span id="q3_building_info" style="font-weight:700;"></span></div>
-    </div>
-
-    <!-- CH Level data (read-only display for 2nd+ HH) -->
-    <div id="chDataDisplay" style="display:none;background:#f0f4ff;border-radius:10px;padding:10px 14px;margin:0 0 8px;font-size:12px;">
-      <div style="font-weight:700;color:var(--blue2);margin-bottom:6px;">📐 Census House Data (Book: first HH only)</div>
+    <!-- Hidden CH data banner — shown above first screen, kept inline -->
+    <div id="chDataDisplay" style="display:none;">
+      <div style="font-weight:700;color:var(--hlo-blue2);margin-bottom:4px;">📐 Census House Data</div>
       <div>Q4 Floor: <span id="disp_q4">—</span> &nbsp;|&nbsp; Q5 Wall: <span id="disp_q5">—</span> &nbsp;|&nbsp; Q6 Roof: <span id="disp_q6">—</span></div>
       <div>Q7 Use: <span id="disp_q7">—</span> &nbsp;|&nbsp; Q8 Condition: <span id="disp_q8">—</span></div>
     </div>
 
-    <div class="card-section-label">Head of Household Particulars</div>
+    <!-- ===== SCREEN 1: Identification + SE + Q9 + Q10 + Q11 ===== -->
+    <div class="hlo-screen active" data-screen="1" data-required="q10_members,q11_name">
+      <div class="card-section-label">Census House Particulars</div>
 
-    <!-- SE ID (Reference Only - No fetch) -->
-    <div class="question-block" id="q_se_block">
-      <div class="question-title">SE Reference (Self-Enumeration)</div>
-      <div class="question-hint">⚠️ सिर्फ Reference के लिए — कोई auto-fetch नहीं होगा। अगर परिवार ने SE की है तो उनका ID यहाँ नोट करें (Optional)</div>
-      <input type="text" class="text-input" id="se_id_input" placeholder="SE ID डालें (Optional)">
-    </div>
+      <div class="hlo-id-strip">
+        <span><b>1.</b> Line: <span id="q1_display"></span></span>
+        <span><b>3.</b> CH: <span id="q3_display"></span></span>
+        <span>Building: <span id="q3_building_info" style="font-weight:700;"></span></span>
+      </div>
 
-    <!-- Q9 Household Number (auto, readonly) -->
-    <div class="question-block">
-      <div class="question-title">9. Household number</div>
-      <input type="text" class="text-input" id="q9_hhno" readonly>
-    </div>
-    <!-- Q10 -->
-    <div class="question-block">
-      <div class="question-title">10. Total number of persons normally residing</div>
-      <input type="number" class="text-input" id="q10_members" min="0" placeholder="Enter Count">
-    </div>
-    <!-- Q11 -->
-    <div class="question-block">
-      <div class="question-title">11. Name of the head of the household</div>
-      <input type="text" class="text-input" id="q11_name" placeholder="Enter name">
-    </div>
-    <!-- Q12 -->
-    <div class="question-block">
-      <div class="question-title">12. Sex</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q12" value="1" id="q12_1"><label for="q12_1">1-Male</label></div>
-        <div class="radio-item"><input type="radio" name="q12" value="2" id="q12_2"><label for="q12_2">2-Female</label></div>
-        <div class="radio-item"><input type="radio" name="q12" value="3" id="q12_3"><label for="q12_3">3-Transgender person</label></div>
+      <!-- SE Reference (Optional) -->
+      <div class="question-block" id="q_se_block">
+        <div class="question-title">SE Reference (Self-Enumeration)</div>
+        <div class="question-hint">⚠️ सिर्फ Reference के लिए — कोई auto-fetch नहीं होगा। अगर परिवार ने SE की है तो उनका ID यहाँ नोट करें (Optional)</div>
+        <input type="text" class="text-input" id="se_id_input" placeholder="SE ID डालें (Optional)">
       </div>
-    </div>
-    <!-- Q13 -->
-    <div class="question-block">
-      <div class="question-title">13. If SC or ST or Other</div>
-      <div class="question-hint">Scheduled Caste can be only from Hindus, Sikhs and Buddhists. Scheduled Tribe can be from any religion.</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q13" value="1" id="q13_1"><label for="q13_1">1-SC</label></div>
-        <div class="radio-item"><input type="radio" name="q13" value="2" id="q13_2"><label for="q13_2">2-ST</label></div>
-        <div class="radio-item"><input type="radio" name="q13" value="3" id="q13_3"><label for="q13_3">3-Other</label></div>
-      </div>
-    </div>
-    <!-- Q14 -->
-    <div class="question-block">
-      <div class="question-title">14. Ownership status of this house</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q14" value="1" id="q14_1"><label for="q14_1">1-Owned</label></div>
-        <div class="radio-item"><input type="radio" name="q14" value="2" id="q14_2"><label for="q14_2">2-Rented but has own house elsewhere</label></div>
-        <div class="radio-item"><input type="radio" name="q14" value="3" id="q14_3"><label for="q14_3">3-Rented and doesn't own any house</label></div>
-        <div class="radio-item"><input type="radio" name="q14" value="4" id="q14_4"><label for="q14_4">4-Any other</label></div>
-      </div>
-    </div>
-    <!-- Q15 -->
-    <div class="question-block">
-      <div class="question-title">15. Number of dwelling rooms</div>
-      <div class="question-hint">Do not include kitchen, bathroom, latrine, store room, passageway and verandah.</div>
-      <input type="number" class="text-input" id="q15_rooms" min="0" placeholder="Enter Count">
-    </div>
-    <!-- Q16 -->
-    <div class="question-block">
-      <div class="question-title">16. Number of married couple(s) living in this household</div>
-      <input type="number" class="text-input" id="q16_couples" min="0" placeholder="Enter Count">
-    </div>
 
-    <div class="card-section-label">Amenities available to the household</div>
-
-    <!-- Q17 -->
-    <div class="question-block" id="qblock_q17">
-      <div class="question-title">17. Main source of drinking water</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q17" value="1" id="q17_1"><label for="q17_1">1-Tap water from treated source</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="2" id="q17_2"><label for="q17_2">2-Tap water from un-treated source</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="3" id="q17_3"><label for="q17_3">3-Well</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="4" id="q17_4"><label for="q17_4">4-Hand Pump</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="5" id="q17_5"><label for="q17_5">5-Tubewell/borehole</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="6" id="q17_6"><label for="q17_6">6-Spring</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="7" id="q17_7"><label for="q17_7">7-River/canal</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="8" id="q17_8"><label for="q17_8">8-Tank/pond/lake</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="9" id="q17_9"><label for="q17_9">9-Packaged/bottled water</label></div>
-        <div class="radio-item"><input type="radio" name="q17" value="0" id="q17_0"><label for="q17_0">0-Other source</label></div>
+      <div class="question-block">
+        <div class="question-title">9. Household number</div>
+        <input type="text" class="text-input" id="q9_hhno" readonly>
       </div>
-    </div>
-    <!-- Q18 -->
-    <div class="question-block" id="qblock_q18">
-      <div class="question-title">18. Availability of drinking water source</div>
-      <div class="question-hint">"Near the premises" means within 100m in Urban, 500m in Rural</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q18" value="1" id="q18_1"><label for="q18_1">1-Within premises</label></div>
-        <div class="radio-item"><input type="radio" name="q18" value="2" id="q18_2"><label for="q18_2">2-Near the premises</label></div>
-        <div class="radio-item"><input type="radio" name="q18" value="3" id="q18_3"><label for="q18_3">3-Away</label></div>
+      <div class="question-block">
+        <div class="question-title">10. Total number of persons normally residing<span class="req-star">*</span></div>
+        <input type="number" class="text-input" id="q10_members" min="0" placeholder="Enter Count">
       </div>
-    </div>
-    <!-- Q19 -->
-    <div class="question-block" id="qblock_q19">
-      <div class="question-title">19. Main source of lighting</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q19" value="1" id="q19_1"><label for="q19_1">1-Electricity</label></div>
-        <div class="radio-item"><input type="radio" name="q19" value="2" id="q19_2"><label for="q19_2">2-Kerosene</label></div>
-        <div class="radio-item"><input type="radio" name="q19" value="3" id="q19_3"><label for="q19_3">3-Solar</label></div>
-        <div class="radio-item"><input type="radio" name="q19" value="4" id="q19_4"><label for="q19_4">4-Other oil</label></div>
-        <div class="radio-item"><input type="radio" name="q19" value="5" id="q19_5"><label for="q19_5">5-Any Other</label></div>
-        <div class="radio-item"><input type="radio" name="q19" value="6" id="q19_6"><label for="q19_6">6-No lighting</label></div>
-      </div>
-    </div>
-    <!-- Q20 -->
-    <div class="question-block" id="qblock_q20">
-      <div class="question-title">20. Access to latrine</div>
-      <div class="radio-sub-label">Yes</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q20" value="1" id="q20_1"><label for="q20_1">1-Exclusively for household use only</label></div>
-        <div class="radio-item"><input type="radio" name="q20" value="2" id="q20_2"><label for="q20_2">2-Shared with other household</label></div>
-        <div class="radio-item"><input type="radio" name="q20" value="3" id="q20_3"><label for="q20_3">3-Public latrine</label></div>
-      </div>
-      <div class="radio-sub-label">No</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q20" value="4" id="q20_4"><label for="q20_4">4-Open</label></div>
-      </div>
-    </div>
-    <!-- Q21 -->
-    <div class="question-block" id="qblock_q21">
-      <div class="question-title">21. Type of latrine</div>
-      <div class="radio-sub-label">Flush/pour-flush latrine connected to</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q21" value="1" id="q21_1"><label for="q21_1">1 - Piped sewer system</label></div>
-        <div class="radio-item"><input type="radio" name="q21" value="2" id="q21_2"><label for="q21_2">2 - Septic tank</label></div>
-        <div class="radio-item"><input type="radio" name="q21" value="3" id="q21_3"><label for="q21_3">3 - Other system</label></div>
-      </div>
-      <div class="radio-sub-label">Twin Pit latrine</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q21" value="4" id="q21_4"><label for="q21_4">4 - With slab / ventilated improved pit</label></div>
-        <div class="radio-item"><input type="radio" name="q21" value="5" id="q21_5"><label for="q21_5">5 - Without slab / open pit</label></div>
-      </div>
-      <div class="radio-sub-label">Single Pit latrine</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q21" value="6" id="q21_6"><label for="q21_6">6 - With slab / ventilated improved pit</label></div>
-        <div class="radio-item"><input type="radio" name="q21" value="7" id="q21_7"><label for="q21_7">7 - Without slab / open pit</label></div>
-      </div>
-      <div class="radio-sub-label">Service latrine</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q21" value="8" id="q21_8"><label for="q21_8">8 - Night soil removed by human</label></div>
-        <div class="radio-item"><input type="radio" name="q21" value="9" id="q21_9"><label for="q21_9">9 - Night soil serviced by animals</label></div>
-        <div class="radio-item"><input type="radio" name="q21" value="0" id="q21_0"><label for="q21_0"><strong>0 - Night soil disposed into open drain</strong></label></div>
-      </div>
-    </div>
-    <!-- Q22 -->
-    <div class="question-block" id="qblock_q22">
-      <div class="question-title">22. Waste water outlet connected to</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q22" value="1" id="q22_1"><label for="q22_1">1-Closed drainage</label></div>
-        <div class="radio-item"><input type="radio" name="q22" value="2" id="q22_2"><label for="q22_2">2-Open drainage</label></div>
-        <div class="radio-item"><input type="radio" name="q22" value="3" id="q22_3"><label for="q22_3">3-No drainage</label></div>
-      </div>
-    </div>
-    <!-- Q23 -->
-    <div class="question-block" id="qblock_q23">
-      <div class="question-title">23. Bathing facility available within the premises</div>
-      <div class="radio-sub-label">Yes</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q23" value="1" id="q23_1"><label for="q23_1">1-Bathroom</label></div>
-        <div class="radio-item"><input type="radio" name="q23" value="2" id="q23_2"><label for="q23_2">2-Enclosure without roof</label></div>
-      </div>
-      <div class="radio-sub-label">No</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q23" value="3" id="q23_3"><label for="q23_3">3-No</label></div>
-      </div>
-    </div>
-    <!-- Q24 -->
-    <div class="question-block" id="qblock_q24">
-      <div class="question-title">24. Availability of kitchen and LPG/PNG Connection</div>
-      <div class="radio-sub-label">Cooking in kitchen</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q24" value="1" id="q24_1"><label for="q24_1">1-Has LPG/PNG Connection</label></div>
-        <div class="radio-item"><input type="radio" name="q24" value="2" id="q24_2"><label for="q24_2">2-Doesn't have LPG/PNG Connection</label></div>
-      </div>
-      <div class="radio-sub-label">Cooking inside house, but not in kitchen</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q24" value="3" id="q24_3"><label for="q24_3">3-Has LPG/PNG Connection</label></div>
-        <div class="radio-item"><input type="radio" name="q24" value="4" id="q24_4"><label for="q24_4">4-Doesn't have LPG/PNG Connection</label></div>
-      </div>
-      <div class="radio-sub-label">Cooking in open/outside house</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q24" value="5" id="q24_5"><label for="q24_5">5-Has LPG/PNG Connection</label></div>
-        <div class="radio-item"><input type="radio" name="q24" value="6" id="q24_6"><label for="q24_6">6-Doesn't have LPG/PNG Connection</label></div>
-        <div class="radio-item"><input type="radio" name="q24" value="7" id="q24_7"><label for="q24_7"><strong>7-No cooking</strong></label></div>
-      </div>
-    </div>
-    <!-- Q25 -->
-    <div class="question-block" id="qblock_q25">
-      <div class="question-title">25. Main fuel used for cooking</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q25" value="1" id="q25_1"><label for="q25_1">1-Firewood</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="2" id="q25_2"><label for="q25_2">2-Crop residue</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="3" id="q25_3"><label for="q25_3">3-Cowdung cake</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="4" id="q25_4"><label for="q25_4">4-Coal/lignite/charcoal</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="5" id="q25_5"><label for="q25_5">5-Kerosene</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="6" id="q25_6"><label for="q25_6">6-LPG/PNG</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="7" id="q25_7"><label for="q25_7">7-Electricity</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="8" id="q25_8"><label for="q25_8">8-Bio-gas</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="9" id="q25_9"><label for="q25_9">9-Solar</label></div>
-        <div class="radio-item"><input type="radio" name="q25" value="0" id="q25_0"><label for="q25_0">0-Any other</label></div>
+      <div class="question-block">
+        <div class="question-title">11. Name of the head of the household<span class="req-star">*</span></div>
+        <input type="text" class="text-input" id="q11_name" placeholder="Enter name">
       </div>
     </div>
 
-    <div class="card-section-label">Assets possessed by the household</div>
-
-    <!-- Q26 -->
-    <div class="question-block" id="qblock_q26">
-      <div class="question-title">26. Radio/Transistor</div>
-      <div class="radio-sub-label">Yes</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q26" value="1" id="q26_1"><label for="q26_1">1-Traditional radio set</label></div>
-        <div class="radio-item"><input type="radio" name="q26" value="2" id="q26_2"><label for="q26_2">2-On mobile/smartphone</label></div>
-        <div class="radio-item"><input type="radio" name="q26" value="3" id="q26_3"><label for="q26_3">3-On any other device</label></div>
+    <!-- ===== SCREEN 2: Q14 (Ownership) ===== -->
+    <div class="hlo-screen" data-screen="2" data-required="q14">
+      <div class="card-section-label">Census House Particulars</div>
+      <div class="question-block">
+        <div class="question-title">14. Ownership status of this house<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q14" value="1" id="q14_1"><label for="q14_1">1-Owned</label></div>
+          <div class="radio-item"><input type="radio" name="q14" value="2" id="q14_2"><label for="q14_2">2-Rented but has own house elsewhere</label></div>
+          <div class="radio-item"><input type="radio" name="q14" value="3" id="q14_3"><label for="q14_3">3-Rented and doesn't own any house</label></div>
+          <div class="radio-item"><input type="radio" name="q14" value="4" id="q14_4"><label for="q14_4">4-Any other</label></div>
+        </div>
       </div>
-      <div class="radio-sub-label">No</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q26" value="4" id="q26_4"><label for="q26_4">4-No</label></div>
-      </div>
-    </div>
-    <!-- Q27 -->
-    <div class="question-block" id="qblock_q27">
-      <div class="question-title">27. Television</div>
-      <div class="radio-sub-label">Yes</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q27" value="1" id="q27_1"><label for="q27_1">1-Doordarshan free dish</label></div>
-        <div class="radio-item"><input type="radio" name="q27" value="2" id="q27_2"><label for="q27_2">2-Other DTH/Dish</label></div>
-        <div class="radio-item"><input type="radio" name="q27" value="3" id="q27_3"><label for="q27_3">3-Cable connection</label></div>
-        <div class="radio-item"><input type="radio" name="q27" value="4" id="q27_4"><label for="q27_4">4-Any other</label></div>
-      </div>
-      <div class="radio-sub-label">No</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q27" value="5" id="q27_5"><label for="q27_5">5-No</label></div>
-      </div>
-    </div>
-    <!-- Q28 -->
-    <div class="question-block" id="qblock_q28">
-      <div class="question-title">28. Access to internet</div>
-      <div class="radio-sub-label">Yes</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q28" value="1" id="q28_1"><label for="q28_1">1-On laptop/Computer</label></div>
-        <div class="radio-item"><input type="radio" name="q28" value="2" id="q28_2"><label for="q28_2">2-On mobile/smartphone</label></div>
-        <div class="radio-item"><input type="radio" name="q28" value="3" id="q28_3"><label for="q28_3">3-On any other device</label></div>
-      </div>
-      <div class="radio-sub-label">No</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q28" value="4" id="q28_4"><label for="q28_4">4-No</label></div>
-      </div>
-    </div>
-    <!-- Q29 -->
-    <div class="question-block" id="qblock_q29">
-      <div class="question-title">29. Laptop/Computer</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q29" value="1" id="q29_1"><label for="q29_1">1-Yes</label></div>
-        <div class="radio-item"><input type="radio" name="q29" value="2" id="q29_2"><label for="q29_2">2-No</label></div>
-      </div>
-    </div>
-    <!-- Q30 -->
-    <div class="question-block" id="qblock_q30">
-      <div class="question-title">30. Telephone and Mobile phone/Smartphone</div>
-      <div class="radio-sub-label">Yes</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q30" value="1" id="q30_1"><label for="q30_1">1-Landline only</label></div>
-      </div>
-      <div class="radio-sub-label">Mobile only</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q30" value="2" id="q30_2"><label for="q30_2">2-Smartphone</label></div>
-        <div class="radio-item"><input type="radio" name="q30" value="3" id="q30_3"><label for="q30_3">3-Other basic mobile</label></div>
-        <div class="radio-item"><input type="radio" name="q30" value="4" id="q30_4"><label for="q30_4">4-Both</label></div>
-      </div>
-      <div class="radio-sub-label">No</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q30" value="5" id="q30_5"><label for="q30_5">5-No</label></div>
-      </div>
-    </div>
-    <!-- Q31 -->
-    <div class="question-block" id="qblock_q31">
-      <div class="question-title">31. Bicycle and Scooter/Motorcycle/Moped</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q31" value="1" id="q31_1"><label for="q31_1">1-Bicycle</label></div>
-        <div class="radio-item"><input type="radio" name="q31" value="2" id="q31_2"><label for="q31_2">2-Scooter/Motorcycle/Moped</label></div>
-        <div class="radio-item"><input type="radio" name="q31" value="3" id="q31_3"><label for="q31_3">3-Both</label></div>
-        <div class="radio-item"><input type="radio" name="q31" value="4" id="q31_4"><label for="q31_4">4-None</label></div>
-      </div>
-    </div>
-    <!-- Q32 -->
-    <div class="question-block" id="qblock_q32">
-      <div class="question-title">32. Car/Jeep/Van</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q32" value="1" id="q32_1"><label for="q32_1">1-Yes</label></div>
-        <div class="radio-item"><input type="radio" name="q32" value="2" id="q32_2"><label for="q32_2">2-No</label></div>
-      </div>
-    </div>
-    <!-- Q33 -->
-    <div class="question-block" id="qblock_q33">
-      <div class="question-title">33. Main cereal consumed in the household</div>
-      <div class="radio-group">
-        <div class="radio-item"><input type="radio" name="q33" value="1" id="q33_1"><label for="q33_1">1-Rice</label></div>
-        <div class="radio-item"><input type="radio" name="q33" value="2" id="q33_2"><label for="q33_2">2-Wheat</label></div>
-        <div class="radio-item"><input type="radio" name="q33" value="3" id="q33_3"><label for="q33_3">3-Jowar</label></div>
-        <div class="radio-item"><input type="radio" name="q33" value="4" id="q33_4"><label for="q33_4">4-Bajra</label></div>
-        <div class="radio-item"><input type="radio" name="q33" value="5" id="q33_5"><label for="q33_5">5-Maize</label></div>
-        <div class="radio-item"><input type="radio" name="q33" value="6" id="q33_6"><label for="q33_6">6-Any other</label></div>
-      </div>
-    </div>
-    <!-- Q34 -->
-    <div class="question-block" id="qblock_q34">
-      <div class="question-title">34. Mobile Number</div>
-      <div class="question-hint">For census related communications only</div>
-      <input type="tel" class="text-input" id="q34_mobile" maxlength="10" placeholder="10 digit mobile number">
     </div>
 
-    <!-- Remarks -->
-    <div class="question-block">
-      <div class="question-title">Remarks / टिप्पणी</div>
-      <textarea class="text-input" id="q_remarks" rows="2" placeholder="Optional remarks..."></textarea>
+    <!-- ===== SCREEN 3: Q15 (Dwelling rooms) ===== -->
+    <div class="hlo-screen" data-screen="3" data-required="q15_rooms">
+      <div class="card-section-label">Census House Particulars</div>
+      <div class="question-block">
+        <div class="question-title">15. Number of dwelling rooms<span class="req-star">*</span></div>
+        <div class="question-hint">Do not include kitchen, bathroom, latrine, store room, passageway and verandah.</div>
+        <input type="number" class="text-input" id="q15_rooms" min="0" placeholder="Enter Count">
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 4: Q16 (Married couples) ===== -->
+    <div class="hlo-screen" data-screen="4" data-required="q16_couples">
+      <div class="card-section-label">Census House Particulars</div>
+      <div class="question-block">
+        <div class="question-title">16. Number of married couple(s) living in this household<span class="req-star">*</span></div>
+        <input type="number" class="text-input" id="q16_couples" min="0" placeholder="Enter Count">
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 5: Q12 (Sex) ===== -->
+    <div class="hlo-screen" data-screen="5" data-required="q12">
+      <div class="card-section-label">Head of Household Particulars</div>
+      <div class="question-block">
+        <div class="question-title">12. Sex<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q12" value="1" id="q12_1"><label for="q12_1">1-Male</label></div>
+          <div class="radio-item"><input type="radio" name="q12" value="2" id="q12_2"><label for="q12_2">2-Female</label></div>
+          <div class="radio-item"><input type="radio" name="q12" value="3" id="q12_3"><label for="q12_3">3-Transgender person</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 6: Q13 (SC/ST/Other) ===== -->
+    <div class="hlo-screen" data-screen="6" data-required="q13">
+      <div class="card-section-label">Head of Household Particulars</div>
+      <div class="question-block">
+        <div class="question-title">13. If SC or ST or Other<span class="req-star">*</span></div>
+        <div class="question-hint">Scheduled Caste can be only from Hindus, Sikhs and Buddhists. Scheduled Tribe can be from any religion.</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q13" value="1" id="q13_1"><label for="q13_1">1-SC</label></div>
+          <div class="radio-item"><input type="radio" name="q13" value="2" id="q13_2"><label for="q13_2">2-ST</label></div>
+          <div class="radio-item"><input type="radio" name="q13" value="3" id="q13_3"><label for="q13_3">3-Other</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 7: Q17 (Drinking water) ===== -->
+    <div class="hlo-screen" data-screen="7" data-required="q17">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q17">
+        <div class="question-title">17. Main source of drinking water<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q17" value="1" id="q17_1"><label for="q17_1">1-Tap water from treated source</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="2" id="q17_2"><label for="q17_2">2-Tap water from un-treated source</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="3" id="q17_3"><label for="q17_3">3-Well</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="4" id="q17_4"><label for="q17_4">4-Hand Pump</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="5" id="q17_5"><label for="q17_5">5-Tubewell/borehole</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="6" id="q17_6"><label for="q17_6">6-Spring</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="7" id="q17_7"><label for="q17_7">7-River/canal</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="8" id="q17_8"><label for="q17_8">8-Tank/pond/lake</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="9" id="q17_9"><label for="q17_9">9-Packaged/bottled water</label></div>
+          <div class="radio-item"><input type="radio" name="q17" value="0" id="q17_0"><label for="q17_0">0-Other source</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 8: Q18 (Water availability) ===== -->
+    <div class="hlo-screen" data-screen="8" data-required="q18">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q18">
+        <div class="question-title">18. Availability of drinking water source<span class="req-star">*</span></div>
+        <div class="question-hint">"Near the premises" means within 100m in Urban, 500m in Rural</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q18" value="1" id="q18_1"><label for="q18_1">1-Within premises</label></div>
+          <div class="radio-item"><input type="radio" name="q18" value="2" id="q18_2"><label for="q18_2">2-Near the premises</label></div>
+          <div class="radio-item"><input type="radio" name="q18" value="3" id="q18_3"><label for="q18_3">3-Away</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 9: Q19 (Lighting) ===== -->
+    <div class="hlo-screen" data-screen="9" data-required="q19">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q19">
+        <div class="question-title">19. Main source of lighting<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q19" value="1" id="q19_1"><label for="q19_1">1-Electricity</label></div>
+          <div class="radio-item"><input type="radio" name="q19" value="2" id="q19_2"><label for="q19_2">2-Kerosene</label></div>
+          <div class="radio-item"><input type="radio" name="q19" value="3" id="q19_3"><label for="q19_3">3-Solar</label></div>
+          <div class="radio-item"><input type="radio" name="q19" value="4" id="q19_4"><label for="q19_4">4-Other oil</label></div>
+          <div class="radio-item"><input type="radio" name="q19" value="5" id="q19_5"><label for="q19_5">5-Any Other</label></div>
+          <div class="radio-item"><input type="radio" name="q19" value="6" id="q19_6"><label for="q19_6">6-No lighting</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 10: Q20 (Latrine access) ===== -->
+    <div class="hlo-screen" data-screen="10" data-required="q20">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q20">
+        <div class="question-title">20. Access to latrine<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Yes</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q20" value="1" id="q20_1"><label for="q20_1">1-Exclusively for household use only</label></div>
+          <div class="radio-item"><input type="radio" name="q20" value="2" id="q20_2"><label for="q20_2">2-Shared with other household</label></div>
+          <div class="radio-item"><input type="radio" name="q20" value="3" id="q20_3"><label for="q20_3">3-Public latrine</label></div>
+        </div>
+        <div class="radio-sub-label">No</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q20" value="4" id="q20_4"><label for="q20_4">4-Open</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 11: Q21 (Latrine type) ===== -->
+    <div class="hlo-screen" data-screen="11" data-required="q21">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q21">
+        <div class="question-title">21. Type of latrine<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Flush/pour-flush latrine connected to</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q21" value="1" id="q21_1"><label for="q21_1">1 - Piped sewer system</label></div>
+          <div class="radio-item"><input type="radio" name="q21" value="2" id="q21_2"><label for="q21_2">2 - Septic tank</label></div>
+          <div class="radio-item"><input type="radio" name="q21" value="3" id="q21_3"><label for="q21_3">3 - Other system</label></div>
+        </div>
+        <div class="radio-sub-label">Twin Pit latrine</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q21" value="4" id="q21_4"><label for="q21_4">4 - With slab / ventilated improved pit</label></div>
+          <div class="radio-item"><input type="radio" name="q21" value="5" id="q21_5"><label for="q21_5">5 - Without slab / open pit</label></div>
+        </div>
+        <div class="radio-sub-label">Single Pit latrine</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q21" value="6" id="q21_6"><label for="q21_6">6 - With slab / ventilated improved pit</label></div>
+          <div class="radio-item"><input type="radio" name="q21" value="7" id="q21_7"><label for="q21_7">7 - Without slab / open pit</label></div>
+        </div>
+        <div class="radio-sub-label">Service latrine</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q21" value="8" id="q21_8"><label for="q21_8">8 - Night soil removed by human</label></div>
+          <div class="radio-item"><input type="radio" name="q21" value="9" id="q21_9"><label for="q21_9">9 - Night soil serviced by animals</label></div>
+          <div class="radio-item"><input type="radio" name="q21" value="0" id="q21_0"><label for="q21_0"><strong>0 - Night soil disposed into open drain</strong></label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 12: Q22 (Waste water) ===== -->
+    <div class="hlo-screen" data-screen="12" data-required="q22">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q22">
+        <div class="question-title">22. Waste water outlet connected to<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q22" value="1" id="q22_1"><label for="q22_1">1-Closed drainage</label></div>
+          <div class="radio-item"><input type="radio" name="q22" value="2" id="q22_2"><label for="q22_2">2-Open drainage</label></div>
+          <div class="radio-item"><input type="radio" name="q22" value="3" id="q22_3"><label for="q22_3">3-No drainage</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 13: Q23 (Bathing) ===== -->
+    <div class="hlo-screen" data-screen="13" data-required="q23">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q23">
+        <div class="question-title">23. Bathing facility available within the premises<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Yes</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q23" value="1" id="q23_1"><label for="q23_1">1-Bathroom</label></div>
+          <div class="radio-item"><input type="radio" name="q23" value="2" id="q23_2"><label for="q23_2">2-Enclosure without roof</label></div>
+        </div>
+        <div class="radio-sub-label">No</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q23" value="3" id="q23_3"><label for="q23_3">3-No</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 14: Q24 (Kitchen/LPG) ===== -->
+    <div class="hlo-screen" data-screen="14" data-required="q24">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q24">
+        <div class="question-title">24. Availability of kitchen and LPG/PNG Connection<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Cooking in kitchen</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q24" value="1" id="q24_1"><label for="q24_1">1-Has LPG/PNG Connection</label></div>
+          <div class="radio-item"><input type="radio" name="q24" value="2" id="q24_2"><label for="q24_2">2-Doesn't have LPG/PNG Connection</label></div>
+        </div>
+        <div class="radio-sub-label">Cooking inside house, but not in kitchen</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q24" value="3" id="q24_3"><label for="q24_3">3-Has LPG/PNG Connection</label></div>
+          <div class="radio-item"><input type="radio" name="q24" value="4" id="q24_4"><label for="q24_4">4-Doesn't have LPG/PNG Connection</label></div>
+        </div>
+        <div class="radio-sub-label">Cooking in open/outside house</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q24" value="5" id="q24_5"><label for="q24_5">5-Has LPG/PNG Connection</label></div>
+          <div class="radio-item"><input type="radio" name="q24" value="6" id="q24_6"><label for="q24_6">6-Doesn't have LPG/PNG Connection</label></div>
+          <div class="radio-item"><input type="radio" name="q24" value="7" id="q24_7"><label for="q24_7"><strong>7-No cooking</strong></label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 15: Q25 (Cooking fuel) ===== -->
+    <div class="hlo-screen" data-screen="15" data-required="q25">
+      <div class="card-section-label">Amenities available to the household</div>
+      <div class="question-block" id="qblock_q25">
+        <div class="question-title">25. Main fuel used for cooking<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q25" value="1" id="q25_1"><label for="q25_1">1-Firewood</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="2" id="q25_2"><label for="q25_2">2-Crop residue</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="3" id="q25_3"><label for="q25_3">3-Cowdung cake</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="4" id="q25_4"><label for="q25_4">4-Coal/lignite/charcoal</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="5" id="q25_5"><label for="q25_5">5-Kerosene</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="6" id="q25_6"><label for="q25_6">6-LPG/PNG</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="7" id="q25_7"><label for="q25_7">7-Electricity</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="8" id="q25_8"><label for="q25_8">8-Bio-gas</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="9" id="q25_9"><label for="q25_9">9-Solar</label></div>
+          <div class="radio-item"><input type="radio" name="q25" value="0" id="q25_0"><label for="q25_0">0-Any other</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 16: Q26 (Radio) ===== -->
+    <div class="hlo-screen" data-screen="16" data-required="q26">
+      <div class="card-section-label">Assets possessed by the household</div>
+      <div class="question-block" id="qblock_q26">
+        <div class="question-title">26. Radio/Transistor<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Yes</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q26" value="1" id="q26_1"><label for="q26_1">1-Traditional radio set</label></div>
+          <div class="radio-item"><input type="radio" name="q26" value="2" id="q26_2"><label for="q26_2">2-On mobile/smartphone</label></div>
+          <div class="radio-item"><input type="radio" name="q26" value="3" id="q26_3"><label for="q26_3">3-On any other device</label></div>
+        </div>
+        <div class="radio-sub-label">No</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q26" value="4" id="q26_4"><label for="q26_4">4-No</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 17: Q27 (Television) ===== -->
+    <div class="hlo-screen" data-screen="17" data-required="q27">
+      <div class="card-section-label">Assets possessed by the household</div>
+      <div class="question-block" id="qblock_q27">
+        <div class="question-title">27. Television<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Yes</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q27" value="1" id="q27_1"><label for="q27_1">1-Doordarshan free dish</label></div>
+          <div class="radio-item"><input type="radio" name="q27" value="2" id="q27_2"><label for="q27_2">2-Other DTH/Dish</label></div>
+          <div class="radio-item"><input type="radio" name="q27" value="3" id="q27_3"><label for="q27_3">3-Cable connection</label></div>
+          <div class="radio-item"><input type="radio" name="q27" value="4" id="q27_4"><label for="q27_4">4-Any other</label></div>
+        </div>
+        <div class="radio-sub-label">No</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q27" value="5" id="q27_5"><label for="q27_5">5-No</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 18: Q28 + Q29 (Internet + Laptop) ===== -->
+    <div class="hlo-screen" data-screen="18" data-required="q28,q29">
+      <div class="card-section-label">Assets possessed by the household</div>
+      <div class="question-block" id="qblock_q28">
+        <div class="question-title">28. Access to internet<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Yes</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q28" value="1" id="q28_1"><label for="q28_1">1-On laptop/Computer</label></div>
+          <div class="radio-item"><input type="radio" name="q28" value="2" id="q28_2"><label for="q28_2">2-On mobile/smartphone</label></div>
+          <div class="radio-item"><input type="radio" name="q28" value="3" id="q28_3"><label for="q28_3">3-On any other device</label></div>
+        </div>
+        <div class="radio-sub-label">No</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q28" value="4" id="q28_4"><label for="q28_4">4-No</label></div>
+        </div>
+      </div>
+      <div class="question-block" id="qblock_q29">
+        <div class="question-title">29. Laptop/Computer<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q29" value="1" id="q29_1"><label for="q29_1">1-Yes</label></div>
+          <div class="radio-item"><input type="radio" name="q29" value="2" id="q29_2"><label for="q29_2">2-No</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 19: Q30 (Phone) ===== -->
+    <div class="hlo-screen" data-screen="19" data-required="q30">
+      <div class="card-section-label">Assets possessed by the household</div>
+      <div class="question-block" id="qblock_q30">
+        <div class="question-title">30. Telephone and Mobile phone/Smartphone<span class="req-star">*</span></div>
+        <div class="radio-sub-label">Yes</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q30" value="1" id="q30_1"><label for="q30_1">1-Landline only</label></div>
+        </div>
+        <div class="radio-sub-label">Mobile only</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q30" value="2" id="q30_2"><label for="q30_2">2-Smartphone</label></div>
+          <div class="radio-item"><input type="radio" name="q30" value="3" id="q30_3"><label for="q30_3">3-Other basic mobile</label></div>
+          <div class="radio-item"><input type="radio" name="q30" value="4" id="q30_4"><label for="q30_4">4-Both</label></div>
+        </div>
+        <div class="radio-sub-label">No</div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q30" value="5" id="q30_5"><label for="q30_5">5-No</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 20: Q31 + Q32 (Bicycle + Car) ===== -->
+    <div class="hlo-screen" data-screen="20" data-required="q31,q32">
+      <div class="card-section-label">Assets possessed by the household</div>
+      <div class="question-block" id="qblock_q31">
+        <div class="question-title">31. Bicycle and Scooter/Motorcycle/Moped<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q31" value="1" id="q31_1"><label for="q31_1">1-Bicycle</label></div>
+          <div class="radio-item"><input type="radio" name="q31" value="2" id="q31_2"><label for="q31_2">2-Scooter/Motorcycle/Moped</label></div>
+          <div class="radio-item"><input type="radio" name="q31" value="3" id="q31_3"><label for="q31_3">3-Both</label></div>
+          <div class="radio-item"><input type="radio" name="q31" value="4" id="q31_4"><label for="q31_4">4-None</label></div>
+        </div>
+      </div>
+      <div class="question-block" id="qblock_q32">
+        <div class="question-title">32. Car/Jeep/Van<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q32" value="1" id="q32_1"><label for="q32_1">1-Yes</label></div>
+          <div class="radio-item"><input type="radio" name="q32" value="2" id="q32_2"><label for="q32_2">2-No</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 21: Q33 (Main cereal) ===== -->
+    <div class="hlo-screen" data-screen="21" data-required="q33">
+      <div class="card-section-label">Head of Household Particulars</div>
+      <div class="question-block" id="qblock_q33">
+        <div class="question-title">33. Main cereal consumed in the household<span class="req-star">*</span></div>
+        <div class="radio-group">
+          <div class="radio-item"><input type="radio" name="q33" value="1" id="q33_1"><label for="q33_1">1-Rice</label></div>
+          <div class="radio-item"><input type="radio" name="q33" value="2" id="q33_2"><label for="q33_2">2-Wheat</label></div>
+          <div class="radio-item"><input type="radio" name="q33" value="3" id="q33_3"><label for="q33_3">3-Jowar</label></div>
+          <div class="radio-item"><input type="radio" name="q33" value="4" id="q33_4"><label for="q33_4">4-Bajra</label></div>
+          <div class="radio-item"><input type="radio" name="q33" value="5" id="q33_5"><label for="q33_5">5-Maize</label></div>
+          <div class="radio-item"><input type="radio" name="q33" value="6" id="q33_6"><label for="q33_6">6-Any other</label></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 22 (FINAL): Q34 + Remarks → Submit ===== -->
+    <div class="hlo-screen" data-screen="22" data-required="q34_mobile">
+      <div class="card-section-label">Head of Household Particulars</div>
+      <div class="question-block" id="qblock_q34">
+        <div class="question-title">34. Mobile Number<span class="req-star">*</span></div>
+        <div class="question-hint">For census related communications only — 10 digits</div>
+        <input type="tel" class="text-input" id="q34_mobile" maxlength="10" placeholder="10 digit mobile number">
+      </div>
+      <div class="question-block">
+        <div class="question-title">Remarks / टिप्पणी</div>
+        <div class="question-hint">Optional</div>
+        <textarea class="text-input" id="q_remarks" rows="2" placeholder="Optional remarks..."></textarea>
+      </div>
     </div>
 
   </div><!-- end content -->
 
   <div class="bottom-nav-inner">
-    <button class="btn btn-outline" onclick="backFromHHForm()" style="min-width:70px;">Prev</button>
+    <button class="btn btn-outline" onclick="hloPrev()" style="min-width:70px;">Prev</button>
     <button class="btn btn-gray" onclick="showJumpModal()" style="min-width:70px;">Jump</button>
-    <button class="btn btn-blue" onclick="submitForReview()" style="min-width:80px;">Submit</button>
+    <button class="btn btn-blue" id="btnHLONext" onclick="hloNext()" style="min-width:80px;">Next</button>
   </div>
 </div>
 
@@ -1257,29 +1409,31 @@ canvas#sigCanvas {
 <div class="modal-overlay" id="jumpModal">
   <div class="modal-box">
     <h3>Jump to Question</h3>
+    <p style="font-size:11px;color:var(--hlo-muted);margin-bottom:8px;">⚠️ पहले current screen के सभी जरूरी जवाब भरें</p>
     <select class="select-input" id="jumpSelect" style="margin-bottom:12px;">
-      <option value="">-- Select Question --</option>
-      <option value="q9_hhno">Q9 - Household number</option>
-      <option value="q10_members">Q10 - Total persons</option>
-      <option value="q11_name">Q11 - Head name</option>
-      <option value="qblock_q17">Q17 - Drinking water</option>
-      <option value="qblock_q18">Q18 - Water availability</option>
-      <option value="qblock_q19">Q19 - Lighting</option>
-      <option value="qblock_q20">Q20 - Access to latrine</option>
-      <option value="qblock_q21">Q21 - Type of latrine</option>
-      <option value="qblock_q22">Q22 - Waste water</option>
-      <option value="qblock_q23">Q23 - Bathing facility</option>
-      <option value="qblock_q24">Q24 - Kitchen/LPG</option>
-      <option value="qblock_q25">Q25 - Cooking fuel</option>
-      <option value="qblock_q26">Q26 - Radio</option>
-      <option value="qblock_q27">Q27 - Television</option>
-      <option value="qblock_q28">Q28 - Internet</option>
-      <option value="qblock_q29">Q29 - Laptop/Computer</option>
-      <option value="qblock_q30">Q30 - Phone</option>
-      <option value="qblock_q31">Q31 - Bicycle/Motorcycle</option>
-      <option value="qblock_q32">Q32 - Car/Jeep/Van</option>
-      <option value="qblock_q33">Q33 - Main cereal</option>
-      <option value="q34_mobile">Q34 - Mobile number</option>
+      <option value="">-- Select Screen --</option>
+      <option value="1">Screen 1 — Q9/Q10/Q11 (HH No, Members, Head)</option>
+      <option value="2">Screen 2 — Q14 (Ownership)</option>
+      <option value="3">Screen 3 — Q15 (Dwelling rooms)</option>
+      <option value="4">Screen 4 — Q16 (Married couples)</option>
+      <option value="5">Screen 5 — Q12 (Sex)</option>
+      <option value="6">Screen 6 — Q13 (SC/ST/Other)</option>
+      <option value="7">Screen 7 — Q17 (Drinking water)</option>
+      <option value="8">Screen 8 — Q18 (Water availability)</option>
+      <option value="9">Screen 9 — Q19 (Lighting)</option>
+      <option value="10">Screen 10 — Q20 (Latrine access)</option>
+      <option value="11">Screen 11 — Q21 (Latrine type)</option>
+      <option value="12">Screen 12 — Q22 (Waste water)</option>
+      <option value="13">Screen 13 — Q23 (Bathing)</option>
+      <option value="14">Screen 14 — Q24 (Kitchen/LPG)</option>
+      <option value="15">Screen 15 — Q25 (Cooking fuel)</option>
+      <option value="16">Screen 16 — Q26 (Radio)</option>
+      <option value="17">Screen 17 — Q27 (Television)</option>
+      <option value="18">Screen 18 — Q28/Q29 (Internet/Laptop)</option>
+      <option value="19">Screen 19 — Q30 (Phone)</option>
+      <option value="20">Screen 20 — Q31/Q32 (Bicycle/Car)</option>
+      <option value="21">Screen 21 — Q33 (Main cereal)</option>
+      <option value="22">Screen 22 — Q34 (Mobile + Submit)</option>
     </select>
     <div class="modal-btns">
       <button class="modal-btn-no" onclick="closeModal('jumpModal')">Cancel</button>
@@ -1478,6 +1632,10 @@ function showPage(id) {
   window.scrollTo(0,0);
   if(id==='pageAnalysis') renderAnalysis();
   if(id==='pageViewSummary') { refreshStats(); }
+  // HLO wizard: always reset to screen 1 when entering the HH form
+  if(id==='pageHLOForm') {
+    if(typeof showHLOScreen === 'function') showHLOScreen(1);
+  }
 }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
@@ -2005,7 +2163,8 @@ function showCHDataDisplay(ch, isEdit) {
   }
 
   let disp = document.getElementById('chDataDisplay');
-  // Always show the CH data banner
+  // Mark that data is present; wizard's showHLOScreen will toggle visibility per screen
+  disp.dataset.hasdata = '1';
   disp.style.display = 'block';
   document.getElementById('disp_q4').innerText = ch.q4 || '—';
   document.getElementById('disp_q5').innerText = ch.q5 || '—';
@@ -2020,7 +2179,8 @@ function clearHHForm() {
     let el=document.getElementById(id); if(el) el.value='';
   });
   let seEl = document.getElementById('se_id_input'); if(seEl) seEl.value='';
-  document.getElementById('chDataDisplay').style.display='none';
+  let disp = document.getElementById('chDataDisplay');
+  if(disp) { disp.style.display='none'; disp.dataset.hasdata = '0'; }
 }
 
 function backFromHHForm() {
@@ -2391,20 +2551,171 @@ function renderUpdationList() {
 }
 
 // ============================================================
-// JUMP
+// HLO WIZARD (screen-by-screen, real HLO app style)
 // ============================================================
-function showJumpModal() { document.getElementById('jumpModal').classList.add('show'); }
+let _hloCurrentScreen = 1;
+const HLO_TOTAL_SCREENS = 22;
+
+// Required-field key list for radio-name detection
+const _HLO_RADIO_NAMES = ['q12','q13','q14','q17','q18','q19','q20','q21','q22','q23','q24','q25','q26','q27','q28','q29','q30','q31','q32','q33'];
+
+function showHLOScreen(n) {
+  if(n < 1) n = 1;
+  if(n > HLO_TOTAL_SCREENS) n = HLO_TOTAL_SCREENS;
+  _hloCurrentScreen = n;
+
+  // Toggle screens
+  document.querySelectorAll('.hlo-screen').forEach(s => s.classList.remove('active','invalid'));
+  let target = document.querySelector('.hlo-screen[data-screen="'+n+'"]');
+  if(target) target.classList.add('active');
+
+  // Update progress
+  let fill = document.getElementById('hloProgressFill');
+  let txt = document.getElementById('hloProgressText');
+  if(fill) fill.style.width = (n/HLO_TOTAL_SCREENS*100).toFixed(1) + '%';
+  if(txt)  txt.innerText = n + ' / ' + HLO_TOTAL_SCREENS;
+
+  // Update Next-button label (Submit on last screen)
+  let nextBtn = document.getElementById('btnHLONext');
+  if(nextBtn) nextBtn.innerText = (n === HLO_TOTAL_SCREENS) ? 'Submit' : 'Next';
+
+  // Show CH data banner only on screen 1
+  let chDisp = document.getElementById('chDataDisplay');
+  if(chDisp && chDisp.dataset.hasdata === '1') {
+    chDisp.style.display = (n === 1) ? 'block' : 'none';
+  }
+
+  // Scroll content area to top
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function _hloShakeCurrent(focusEl) {
+  let active = document.querySelector('.hlo-screen.active');
+  if(active) {
+    active.classList.remove('invalid');
+    void active.offsetWidth;
+    active.classList.add('invalid');
+    setTimeout(()=>active.classList.remove('invalid'), 600);
+  }
+  if(focusEl && focusEl.focus) try { focusEl.focus(); } catch(e){}
+}
+
+function validateHLOScreen() {
+  let active = document.querySelector('.hlo-screen.active');
+  if(!active) return true;
+  let req = (active.getAttribute('data-required') || '').split(',').map(s=>s.trim()).filter(Boolean);
+  for(let key of req) {
+    if(_HLO_RADIO_NAMES.indexOf(key) !== -1) {
+      // Radio group
+      let val = getRadioVal(key);
+      if(!val) {
+        toast('⚠️ कृपया '+key.toUpperCase()+' का उत्तर चुनें');
+        _hloShakeCurrent(null);
+        return false;
+      }
+    } else {
+      // Input field by id
+      let el = document.getElementById(key);
+      if(!el) continue;
+      let v = (el.value || '').toString().trim();
+      if(!v) {
+        toast('⚠️ कृपया जरूरी जानकारी भरें');
+        _hloShakeCurrent(el);
+        return false;
+      }
+      if(key === 'q34_mobile' && !/^\d{10}$/.test(v)) {
+        toast('⚠️ 10-digit mobile number डालें');
+        _hloShakeCurrent(el);
+        return false;
+      }
+      if((key === 'q10_members' || key === 'q15_rooms' || key === 'q16_couples') && (isNaN(parseInt(v)) || parseInt(v) < 0)) {
+        toast('⚠️ सही संख्या डालें');
+        _hloShakeCurrent(el);
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function validateAllHLOScreens() {
+  // Walk every screen and check its required fields without changing UI
+  let screens = document.querySelectorAll('.hlo-screen');
+  for(let s of screens) {
+    let req = (s.getAttribute('data-required') || '').split(',').map(x=>x.trim()).filter(Boolean);
+    for(let key of req) {
+      if(_HLO_RADIO_NAMES.indexOf(key) !== -1) {
+        if(!getRadioVal(key)) {
+          let scr = parseInt(s.getAttribute('data-screen'));
+          toast('⚠️ Screen '+scr+' पर '+key.toUpperCase()+' का जवाब चाहिए');
+          showHLOScreen(scr);
+          return false;
+        }
+      } else {
+        let el = document.getElementById(key);
+        if(!el) continue;
+        let v = (el.value || '').toString().trim();
+        if(!v) {
+          let scr = parseInt(s.getAttribute('data-screen'));
+          toast('⚠️ Screen '+scr+' पर जरूरी जानकारी अधूरी है');
+          showHLOScreen(scr);
+          setTimeout(()=>{ try{el.focus();}catch(e){} }, 250);
+          return false;
+        }
+        if(key === 'q34_mobile' && !/^\d{10}$/.test(v)) {
+          showHLOScreen(parseInt(s.getAttribute('data-screen')));
+          toast('⚠️ 10-digit mobile number डालें');
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+function hloNext() {
+  if(!validateHLOScreen()) return;
+  if(_hloCurrentScreen >= HLO_TOTAL_SCREENS) {
+    // Final → ensure no screen was skipped via Jump
+    if(!validateAllHLOScreens()) return;
+    submitForReview();
+    return;
+  }
+  showHLOScreen(_hloCurrentScreen + 1);
+}
+
+function hloPrev() {
+  if(_hloCurrentScreen <= 1) {
+    backFromHHForm();
+    return;
+  }
+  showHLOScreen(_hloCurrentScreen - 1);
+}
+
+function resetHLOWizard() {
+  _hloCurrentScreen = 1;
+  showHLOScreen(1);
+}
+
+// ============================================================
+// JUMP (now jumps between wizard screens)
+// ============================================================
+function showJumpModal() {
+  let js = document.getElementById('jumpSelect');
+  if(js) js.value = '';
+  document.getElementById('jumpModal').classList.add('show');
+}
 function doJump() {
   let sel = document.getElementById('jumpSelect').value;
-  closeModal('jumpModal');
-  if(!sel) return;
-  let el = document.getElementById(sel);
-  if(el) {
-    el.scrollIntoView({behavior:'smooth', block:'center'});
-    el.classList.remove('highlight-q');
-    void el.offsetWidth;
-    el.classList.add('highlight-q');
+  if(!sel) { closeModal('jumpModal'); return; }
+  let target = parseInt(sel);
+  if(!target) { closeModal('jumpModal'); return; }
+  // Forward jumps must validate current screen first
+  if(target > _hloCurrentScreen) {
+    if(!validateHLOScreen()) { closeModal('jumpModal'); return; }
   }
+  closeModal('jumpModal');
+  showHLOScreen(target);
 }
 
 // ============================================================
