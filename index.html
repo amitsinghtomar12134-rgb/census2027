@@ -1705,7 +1705,7 @@ function clearCHForm() {
   let actualUseBlock = document.getElementById('ch_actual_use_block');
   let actualUseInput = document.getElementById('ch_actual_use_desc');
   if(actualUseBlock) actualUseBlock.style.display = 'none';
-  if(actualUseInput) { actualUseInput.value = ''; actualUseInput.disabled = false; }
+  if(actualUseInput) { actualUseInput.value = ''; actualUseInput.disabled = false; actualUseInput.required = false; }
   // Reset locked/inst to default enabled state
   ['ch_locked_no','ch_locked_yes','ch_inst_no','ch_inst_yes'].forEach(id => {
     let el = document.getElementById(id); if(el) el.disabled = false;
@@ -1957,47 +1957,48 @@ function onQ7Change() {
 
   if(q7 === '1') {
     // Residence → Actual Use: HIDE | Locked: ENABLE | Institutional: DISABLE
-    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) actualUseInput.value=''; }
+    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) { actualUseInput.value=''; actualUseInput.required=false; } }
     setDisabled(lockedNo,  null, false, '', lockedHint);
     setDisabled(lockedYes, null, false, '', null);
     setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  true, '❌ Residence में Institutional नहीं होता', instHint);
     setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), true, '', null);
     if(instNo) instNo.checked = true;
+    toast('✅ Residence — परिवार की पूरी जानकारी भरें');
   }
   else if(q7 === '2') {
-    // Residence-cum-other → Actual Use: SHOW | Locked: ENABLE | Institutional: ENABLE
-    if(actualUseBlock) { actualUseBlock.style.display='block'; if(actualUseInput) actualUseInput.disabled=false; }
+    // Residence-cum-other → Actual Use: SHOW+REQUIRED | Locked: ENABLE | Institutional: ENABLE
+    if(actualUseBlock) { actualUseBlock.style.display='block'; if(actualUseInput) { actualUseInput.disabled=false; actualUseInput.required=true; } }
     setDisabled(lockedNo,  null, false, '', lockedHint);
     setDisabled(lockedYes, null, false, '', null);
     setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  false, '', instHint);
     setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), false, '', null);
+    toast('🏠 Residence-cum-other — Actual Use Description जरूर भरें');
   }
   else if(['3','4','5','6','7','8','9'].includes(q7)) {
-    // Non-residential → Actual Use: SHOW | Locked: DISABLE | Institutional: DISABLE
-    if(actualUseBlock) { actualUseBlock.style.display='block'; if(actualUseInput) actualUseInput.disabled=false; }
+    // Non-residential → Actual Use: SHOW+REQUIRED | Locked: DISABLE | Institutional: DISABLE
+    if(actualUseBlock) { actualUseBlock.style.display='block'; if(actualUseInput) { actualUseInput.disabled=false; actualUseInput.required=true; } }
     setDisabled(lockedNo,  document.querySelector('label[for="ch_locked_no"]'),  true, '❌ Non-residential CH Locked नहीं होता', lockedHint);
     setDisabled(lockedYes, document.querySelector('label[for="ch_locked_yes"]'), true, '', null);
     setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  true, '❌ Non-residential CH Institutional नहीं होता', instHint);
     setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), true, '', null);
     if(lockedNo) lockedNo.checked = true;
     if(instNo) instNo.checked = true;
-    // Show info banner: no HH will be added
-    toast('ℹ️ Non-residential CH — कोई Household नहीं जोड़ा जाएगा');
+    toast('🏢 Non-residential — केवल CH details भरें, कोई परिवार नहीं');
   }
   else if(q7 === '0') {
     // Vacant → Actual Use: HIDE | Locked: DISABLE | Institutional: DISABLE
-    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) actualUseInput.value=''; }
+    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) { actualUseInput.value=''; actualUseInput.required=false; } }
     setDisabled(lockedNo,  document.querySelector('label[for="ch_locked_no"]'),  true, '❌ Vacant CH में Locked नहीं होता', lockedHint);
     setDisabled(lockedYes, document.querySelector('label[for="ch_locked_yes"]'), true, '', null);
     setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  true, '❌ Vacant CH Institutional नहीं होता', instHint);
     setDisabled(instYes, document.querySelector('label[for="ch_inst_yes"]'), true, '', null);
     if(lockedNo) lockedNo.checked = true;
     if(instNo) instNo.checked = true;
-    toast('ℹ️ Vacant CH — कोई Household नहीं जोड़ा जाएगा');
+    toast('🚪 Vacant CH — केवल CH details भरें');
   }
   else {
     // No selection — reset all to enabled
-    if(actualUseBlock) actualUseBlock.style.display='none';
+    if(actualUseBlock) { actualUseBlock.style.display='none'; if(actualUseInput) actualUseInput.required=false; }
     setDisabled(lockedNo,  null, false, '', lockedHint);
     setDisabled(lockedYes, null, false, '', null);
     setDisabled(instNo,  document.querySelector('label[for="ch_inst_no"]'),  false, '', instHint);
@@ -2065,13 +2066,18 @@ function saveCHAndGotoHH() {
 
   // ── NON-RESIDENTIAL (Q7 = 3–9) or VACANT (Q7 = 0): No HH ──
   if(!['1','2'].includes(q7)) {
+    // For Q7=3-9: Actual Use Description is required
+    if(['3','4','5','6','7','8','9'].includes(q7)) {
+      if(!actual_use_desc) { toast('⚠️ Actual Use Description जरूरी है (Q7='+q7+' Non-residential)'); document.getElementById('ch_actual_use_desc')?.focus(); return; }
+    }
     let chId = 'ch_' + Date.now().toString(36);
     let ch = { id: chId, ...tempCHData };
     saveNewCHToBuilding(ch, buildingInput);
     appData.nextCHNo++;
+    // ✅ DO NOT increment nextLineNo or nextHHNo — no HH added
     save();
     let isVacant = (q7 === '0');
-    toast(isVacant ? '🚪 Vacant CH saved' : '🏢 Non-residential CH saved — No HH added');
+    toast(isVacant ? '🚪 Vacant CH saved — कोई Household नहीं' : '🏢 Non-residential CH saved — कोई Household नहीं');
     _lastSavedCHId = chId;
     _lastSavedBuildingNo = buildingInput;
     showNextActionPage(chId, buildingInput, isVacant, false);
@@ -2080,12 +2086,15 @@ function saveCHAndGotoHH() {
 
   // ── LOCKED (Q7=1 or 2 + Locked=yes): No HH ──
   if(locked) {
+    // For Q7=2 locked: Actual Use Description required
+    if(q7 === '2' && !actual_use_desc) { toast('⚠️ Actual Use Description जरूरी है (Q7=2)'); document.getElementById('ch_actual_use_desc')?.focus(); return; }
     let chId = 'ch_' + Date.now().toString(36);
     let ch = { id: chId, ...tempCHData };
     saveNewCHToBuilding(ch, tempCHData.building_no);
     appData.nextCHNo++;
+    // ✅ DO NOT increment nextLineNo or nextHHNo — no HH added
     save();
-    toast('🔒 Locked CH saved (no HH added)');
+    toast('🔒 Locked CH saved — कोई Household नहीं जोड़ा जाएगा');
     _lastSavedCHId = chId;
     _lastSavedBuildingNo = tempCHData.building_no;
     showNextActionPage(chId, tempCHData.building_no, false, true);
@@ -2093,6 +2102,8 @@ function saveCHAndGotoHH() {
   }
 
   // ── RESIDENCE / RESIDENCE-CUM-OTHER (Q7=1 or 2, not locked) → HH form ──
+  // For Q7=2: Actual Use Description required
+  if(q7 === '2' && !actual_use_desc) { toast('⚠️ Actual Use Description जरूरी है (Q7=2 Residence-cum-other)'); document.getElementById('ch_actual_use_desc')?.focus(); return; }
   setupHHForm(null, tempCHData);
   showPage('pageHLOForm');
 }
@@ -2146,7 +2157,8 @@ function setupHHForm(editHHId, chDataForNew) {
     let lineNo = pad3(appData.nextLineNo);
     let chNo = chDataForNew.ch_no;
     let isInstitutional = chDataForNew.institutional;
-    let hhNo = isInstitutional ? '999' : pad3(getNextHHNoForCH(chDataForNew));
+    let nextHHNum = getNextHHNoForCH(chDataForNew);
+    let hhNo = isInstitutional ? '999' : pad3(nextHHNum);
 
     document.getElementById('formLineNo').innerText = lineNo;
     document.getElementById('q1_display').innerText = lineNo;
@@ -2161,9 +2173,13 @@ function setupHHForm(editHHId, chDataForNew) {
 
 function getNextHHNoForCH(chData) {
   // HLB-wide global counter — new CH's first HH continues sequence
+  // Institutional CH always gets 999
+  if(chData && chData.institutional) return 999;
   return getGlobalNextHHNo();
 }
 function getNextHHNoForExistingCH(ch) {
+  // Institutional CH → always 999
+  if(ch && ch.institutional) return 999;
   // HLB-wide global counter — sequential across ALL buildings & CHs
   return getGlobalNextHHNo();
 }
@@ -2297,7 +2313,7 @@ function saveAndSync() {
   let isVacant = false, isLocked = false;
 
   if(currentHHId) {
-    // Edit existing HH
+    // Edit existing HH — do NOT increment counters (already counted)
     let found = findHH(currentHHId);
     if(found) {
       let idx = found.ch.households.findIndex(x=>x.id===currentHHId);
@@ -2308,7 +2324,7 @@ function saveAndSync() {
       isLocked = found.ch.locked;
     }
   } else {
-    // New HH
+    // New HH — increment counters ONLY here
     if(tempCHData) {
       // Save CH first, then HH
       let chId = 'ch_' + Date.now().toString(36);
@@ -2333,8 +2349,9 @@ function saveAndSync() {
         isLocked = ch.locked;
       }
     }
+    // ✅ Increment lineNo ONLY when a real Household is saved
     appData.nextLineNo++;
-    // Increment global HH counter (skip institutional 999s — they don't consume the sequence)
+    // ✅ Increment global HH counter ONLY for non-institutional HH
     if(hh.family_no && hh.family_no !== '999') {
       appData.nextHHNo = (appData.nextHHNo || 1) + 1;
     }
@@ -2360,16 +2377,34 @@ function showNextActionPage(chId, buildingNo, isVacant, isLocked) {
   _lastSavedBuildingNo = buildingNo;
   // Info display
   let found = chId ? findCH(chId) : null;
-  let chNo = found ? found.ch.ch_no : '—';
-  let hhCount = found ? (found.ch.households||[]).length : 0;
+  let ch = found ? found.ch : null;
+  let chNo = ch ? ch.ch_no : '—';
+  let hhCount = ch ? (ch.households||[]).length : 0;
+  let q7 = ch ? ch.q7 : '';
+  let isNonResidential = ch && !['1','2'].includes(q7);
   document.getElementById('nextActionInfo').innerText = `CH No: ${chNo} | Building: ${buildingNo} | HH Saved: ${hhCount}`;
-  // Disable "same CH" button for vacant/locked CH
+
+  // "Same CH में HH जोड़ें" button — only show for Q7=1 or Q7=2, not locked
   let sameCHBtn = document.getElementById('btnNextSameCHHH');
   let sameCHHint = document.getElementById('nextSameCHHint');
   if(sameCHBtn) {
-    if(isVacant) { sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.4'; if(sameCHHint) sameCHHint.innerText='❌ Vacant CH — HH add नहीं होगा'; }
-    else if(isLocked) { sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.4'; if(sameCHHint) sameCHHint.innerText='🔒 Locked CH — HH add नहीं होगा'; }
-    else { sameCHBtn.disabled=false; sameCHBtn.style.opacity='1'; if(sameCHHint) sameCHHint.innerText='उसी CH में दूसरा परिवार'; }
+    if(isVacant) {
+      sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.35';
+      sameCHBtn.style.display='flex';
+      if(sameCHHint) sameCHHint.innerText='❌ Vacant CH — HH add नहीं होगा';
+    } else if(isLocked) {
+      sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.35';
+      sameCHBtn.style.display='flex';
+      if(sameCHHint) sameCHHint.innerText='🔒 Locked CH — HH add नहीं होगा';
+    } else if(isNonResidential) {
+      sameCHBtn.disabled=true; sameCHBtn.style.opacity='0.35';
+      sameCHBtn.style.display='flex';
+      if(sameCHHint) sameCHHint.innerText='❌ Non-residential CH — HH नहीं जोड़ सकते';
+    } else {
+      sameCHBtn.disabled=false; sameCHBtn.style.opacity='1';
+      sameCHBtn.style.display='flex';
+      if(sameCHHint) sameCHHint.innerText='उसी CH में दूसरा परिवार';
+    }
   }
   showPage('pageNextAction');
 }
@@ -2502,8 +2537,10 @@ function renderHierarchyTree() {
       let q7Labels = {'1':'Residence','2':'Res+Other','3':'Shop','4':'School','5':'Hotel','6':'Hospital','7':'Factory','8':'Worship','9':'Non-resid','0':'Vacant'};
       let badge = ch.locked ? '<span class="ch-badge badge-locked">🔒 Locked</span>'
         : ch.institutional ? '<span class="ch-badge badge-inst">🏛 Institutional</span>'
-        : (ch.q7 === '0') ? '<span class="ch-badge" style="background:#999;color:white;">🚪 Vacant</span>'
-        : (!['1','2'].includes(ch.q7)) ? '<span class="ch-badge" style="background:#e67e22;color:white;">🏢 Non-Res</span>'
+        : (ch.q7 === '0') ? '<span class="ch-badge" style="background:#888;color:white;">🚪 Vacant</span>'
+        : (ch.q7 === '1') ? '<span class="ch-badge badge-normal">✅ Residence</span>'
+        : (ch.q7 === '2') ? '<span class="ch-badge" style="background:#2980b9;color:white;">🏠 Res+Other</span>'
+        : (!['1','2'].includes(ch.q7)) ? `<span class="ch-badge" style="background:#e67e22;color:white;">🏢 Non-Res (Q7=${ch.q7})</span>`
         : '<span class="ch-badge badge-normal">✅ Normal</span>';
 
       // canAddHH: only Q7=1 (Residence) or Q7=2 (Res-cum-other), and not locked
