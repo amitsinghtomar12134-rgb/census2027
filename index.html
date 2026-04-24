@@ -1511,6 +1511,7 @@ let tempCHData = null;       // CH data collected in step 1 (before save)
 let _lastSavedCHId = null;   // For next action: add HH to same CH
 let _lastSavedBuildingNo = null; // For next action: new CH in same building
 let chFormMode = 'new';      // 'new' | 'existing'
+let _editingCHId = null;     // CH being edited (non-res/vacant/locked edit mode)
 let selectedExistingCHId = null; // CH selected in existing mode
 
 // SE Mock Data
@@ -1723,6 +1724,10 @@ function clearCHForm() {
   // Reset to new CH mode
   chFormMode = 'new';
   selectedExistingCHId = null;
+  _editingCHId = null;
+  // Restore Next button label
+  let nextBtnReset = document.querySelector('#pageCHForm .bottom-nav-inner .btn-blue');
+  if(nextBtnReset) nextBtnReset.textContent = 'Next: Add Household →';
   let existingBlock = document.getElementById('ch_existing_mode_block');
   let newBlock = document.getElementById('ch_new_mode_block');
   if(existingBlock) existingBlock.style.display = 'none';
@@ -2007,6 +2012,41 @@ function onQ7Change() {
 }
 
 function saveCHAndGotoHH() {
+
+  // ── EDIT EXISTING CH MODE (non-res/vacant/locked edit) ───
+  if(_editingCHId) {
+    let buildingInput = document.getElementById('ch_q2_building').value.trim();
+    if(!buildingInput) { toast('⚠️ Building Number जरूरी है'); return; }
+    let q7 = getRadioVal('ch_q7');
+    if(!q7) { toast('⚠️ Q7 जरूरी है'); return; }
+    let actual_use_desc = (document.getElementById('ch_actual_use_desc')?.value || '').trim();
+    if(['2','3','4','5','6','7','8','9'].includes(q7) && !actual_use_desc) {
+      toast('⚠️ Actual Use Description जरूरी है'); document.getElementById('ch_actual_use_desc')?.focus(); return;
+    }
+    // Find and update the CH in place
+    let found = findCH(_editingCHId);
+    if(found) {
+      let ch = found.ch;
+      ch.q4 = getRadioVal('ch_q4');
+      ch.q5 = getRadioVal('ch_q5');
+      ch.q6 = getRadioVal('ch_q6');
+      ch.q7 = q7;
+      ch.q8 = getRadioVal('ch_q8');
+      ch.locked = document.querySelector('input[name="ch_locked"]:checked')?.value === 'yes';
+      ch.institutional = document.querySelector('input[name="ch_institutional"]:checked')?.value === 'yes';
+      ch.actual_use_desc = actual_use_desc;
+      save();
+      toast('✅ CH ' + ch.ch_no + ' updated successfully!');
+    }
+    // Reset edit tracking
+    _editingCHId = null;
+    // Reset button label
+    let nextBtn = document.querySelector('#pageCHForm .bottom-nav-inner .btn-blue');
+    if(nextBtn) nextBtn.textContent = 'Next: Add Household →';
+    clearCHForm();
+    showPage('pageUpdation');
+    return;
+  }
 
   // ── EXISTING CH MODE ─────────────────────────────────────
   if(chFormMode === 'existing') {
@@ -2518,6 +2558,69 @@ function deleteCH(chId) {
   }
 }
 
+// Edit CH (Non-residential / Vacant / Locked) — go back to CH form pre-filled
+function editCH(chId) {
+  let found = findCH(chId);
+  if(!found) { toast('CH नहीं मिला'); return; }
+  let ch = found.ch;
+  let building = found.building;
+
+  // Pre-fill CH form
+  clearCHForm();
+  isEditMode = false;
+  currentCHId = chId;
+  currentBuildingId = building.id;
+  tempCHData = null;
+  _editingCHId = chId; // track we are editing existing CH
+
+  // Building number
+  document.getElementById('ch_q2_building').value = building.building_no;
+  updateBuildingStatusMsg(building.building_no);
+
+  // CH number display
+  document.getElementById('chFormCHNo').innerText = ch.ch_no;
+  document.getElementById('ch_q3_no').value = ch.ch_no;
+  document.getElementById('chFormMode').innerText = '(Edit CH: ' + ch.ch_no + ')';
+
+  // Q4, Q5, Q6, Q7, Q8
+  if(ch.q4) setRadioVal('ch_q4', ch.q4);
+  if(ch.q5) setRadioVal('ch_q5', ch.q5);
+  if(ch.q6) setRadioVal('ch_q6', ch.q6);
+  if(ch.q8) setRadioVal('ch_q8', ch.q8);
+
+  // Q7 — set radio and trigger onQ7Change for UI update
+  if(ch.q7) {
+    setRadioVal('ch_q7', ch.q7);
+    onQ7Change();
+  }
+
+  // Actual use description
+  if(ch.actual_use_desc) {
+    let el = document.getElementById('ch_actual_use_desc');
+    if(el) el.value = ch.actual_use_desc;
+  }
+
+  // Locked / Institutional
+  let lockedNo = document.getElementById('ch_locked_no');
+  let lockedYes = document.getElementById('ch_locked_yes');
+  let instNo = document.getElementById('ch_inst_no');
+  let instYes = document.getElementById('ch_inst_yes');
+  if(ch.locked) { if(lockedYes) lockedYes.checked = true; }
+  else { if(lockedNo) lockedNo.checked = true; }
+  if(ch.institutional) { if(instYes) instYes.checked = true; }
+  else { if(instNo) instNo.checked = true; }
+
+  // Switch to new CH block (existing CH editing uses same form)
+  chModeSelect('new');
+
+  // Change button label
+  let nextBtn = document.querySelector('#pageCHForm .bottom-nav-inner .btn-blue');
+  if(nextBtn) nextBtn.textContent = 'Save Changes ✓';
+
+  showPage('pageCHForm');
+  toast('✏️ CH ' + ch.ch_no + ' edit mode — बदलाव करें और Save करें');
+}
+
 // ============================================================
 // HIERARCHY TREE (View Summary)
 // ============================================================
@@ -2656,21 +2759,23 @@ function renderUpdationList() {
       let isVacant = q7 === '0';
       let isNonRes = !['1','2'].includes(q7) && !isVacant;
       let borderColor = isLocked ? '#555' : isVacant ? '#888' : '#e67e22';
-      let statusLabel = isLocked ? '🔒 LOCKED'
+      let typeLabel = isLocked ? '🔒 LOCKED'
         : isVacant ? '🚪 VACANT'
         : isNonRes ? '🏢 NON-RESIDENTIAL'
         : '📋 HH नहीं';
-      let statusBg = isLocked ? '#555' : isVacant ? '#888' : isNonRes ? '#e67e22' : '#f39c12';
-      let actualUse = ch.actual_use_desc ? `<div class="hh-sub">उपयोग: ${ch.actual_use_desc}</div>` : '';
+      let typeBg = isLocked ? '#555' : isVacant ? '#888' : isNonRes ? '#e67e22' : '#f39c12';
+      let actualUse = ch.actual_use_desc ? `<div class="hh-sub">उपयोग: <b>${ch.actual_use_desc}</b></div>` : '';
       return `<div class="hh-item" style="border-left:3px solid ${borderColor};background:#fafafa;">
         <div class="hh-line">Line: <b>${ch.line_no||'—'}</b> &nbsp;|&nbsp; CH: <b>${ch.ch_no}</b> &nbsp;|&nbsp; Building: <b>${ch.building_no}</b> &nbsp;|&nbsp; HH No: <b>—</b></div>
-        <div class="hh-detail" style="color:#555;">— (${q7Lbl})</div>
-        <div class="hh-sub">Q7: ${q7} (${q7Lbl})</div>
+        <div class="hh-detail" style="color:#333;">${q7Lbl}</div>
+        <div class="hh-sub">Q7: ${q7} | Q4:${ch.q4||'—'} Q5:${ch.q5||'—'} Q6:${ch.q6||'—'} Q8:${ch.q8||'—'}</div>
         ${actualUse}
-        <div style="margin-top:4px;">
-          <span style="font-size:11px;font-weight:700;background:${statusBg};color:white;padding:3px 10px;border-radius:10px;">${statusLabel}</span>
+        <div style="margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:700;background:${typeBg};color:white;padding:3px 10px;border-radius:10px;">${typeLabel}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--hlo-green);">✅ COMPLETE</span>
         </div>
         <div style="margin-top:8px;display:flex;gap:10px;">
+          <button class="btn btn-outline btn-sm" onclick="editCH('${ch.id}')">✏️ Edit CH</button>
           <button class="btn btn-red btn-sm" onclick="deleteCH('${ch.id}')">🗑️ Delete CH</button>
         </div>
       </div>`;
