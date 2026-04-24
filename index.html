@@ -2593,19 +2593,85 @@ function toggleBuilding(id) {
 function renderUpdationList() {
   let el = document.getElementById('updationList');
   if(!el) return;
-  let allHHs = getAllHHs();
-  if(!allHHs.length) { el.innerHTML='<div class="empty-msg">कोई रिकॉर्ड नहीं</div>'; return; }
-  el.innerHTML = allHHs.map(hh=>`
-    <div class="hh-item">
-      <div class="hh-line">Line: ${hh.line_no} &nbsp;|&nbsp; CH: ${hh.ch_no} &nbsp;|&nbsp; Building: ${hh.building_no}</div>
-      <div class="hh-detail">${hh.q11_name||'—'}</div>
-      <div class="hh-sub">HH No: ${hh.family_no} &nbsp;|&nbsp; Members: ${hh.q10_members||'—'}</div>
-      <div class="badge-complete">Status: ${hh.status||'—'}</div>
-      <div style="margin-top:8px;display:flex;gap:10px;">
-        <button class="btn btn-outline btn-sm" onclick="editHH('${hh.id}')">✏️ Edit</button>
-        <button class="btn btn-red btn-sm" onclick="deleteHH('${hh.id}')">🗑️ Delete</button>
-      </div>
-    </div>`).join('');
+
+  let allCHs = getAllCHs();
+  if(!allCHs.length) { el.innerHTML='<div class="empty-msg">कोई रिकॉर्ड नहीं</div>'; return; }
+
+  // Q7 labels
+  let q7Labels = {'1':'Residence','2':'Res-cum-other','3':'Shop/Office','4':'School/College','5':'Hotel/Lodge','6':'Hospital','7':'Factory/Workshop','8':'Place of Worship','9':'Other Non-residential','0':'Vacant'};
+
+  // Build flat list of items: each HH is one row; CHs with no HH also get one row
+  let items = [];
+  allCHs.forEach(ch => {
+    if(ch.households && ch.households.length > 0) {
+      ch.households.forEach(hh => {
+        items.push({ type: 'hh', ch, hh });
+      });
+    } else {
+      // Non-residential / Vacant / Locked / no-HH CH
+      items.push({ type: 'ch_only', ch });
+    }
+  });
+
+  // Sort: first by CH number ascending, then by HH family_no
+  items.sort((a, b) => {
+    let chA = parseInt(a.ch.ch_no) || 0;
+    let chB = parseInt(b.ch.ch_no) || 0;
+    if(chA !== chB) return chA - chB;
+    // within same CH, sort by family_no
+    let fA = a.type === 'hh' ? (parseInt(a.hh.family_no) || 999) : 0;
+    let fB = b.type === 'hh' ? (parseInt(b.hh.family_no) || 999) : 0;
+    return fA - fB;
+  });
+
+  if(!items.length) { el.innerHTML='<div class="empty-msg">कोई रिकॉर्ड नहीं</div>'; return; }
+
+  el.innerHTML = items.map(item => {
+    let ch = item.ch;
+    let q7 = ch.q7 || '—';
+    let q7Lbl = q7Labels[q7] || '—';
+
+    if(item.type === 'hh') {
+      let hh = item.hh;
+      // Status color
+      let statusColor = hh.status === 'COMPLETE' ? 'var(--hlo-green)' : 'var(--accent)';
+      let instBadge = ch.institutional ? ' &nbsp;<span style="font-size:10px;background:var(--accent);color:white;padding:2px 6px;border-radius:8px;">🏛 Institutional</span>' : '';
+      return `<div class="hh-item" style="border-left:3px solid var(--hlo-green);">
+        <div class="hh-line">Line: <b>${hh.line_no||'—'}</b> &nbsp;|&nbsp; CH: <b>${ch.ch_no}</b> &nbsp;|&nbsp; Building: <b>${ch.building_no}</b> &nbsp;|&nbsp; HH No: <b>${hh.family_no||'—'}</b>${instBadge}</div>
+        <div class="hh-detail">${hh.q11_name||'(नाम नहीं)'}</div>
+        <div class="hh-sub">सदस्य: ${hh.q10_members||'—'} &nbsp;|&nbsp; Q7: ${q7} (${q7Lbl})</div>
+        <div style="margin-top:4px;font-size:12px;font-weight:700;color:${statusColor};">✅ ${hh.status||'COMPLETE'}</div>
+        <div style="margin-top:8px;display:flex;gap:10px;">
+          <button class="btn btn-outline btn-sm" onclick="editHH('${hh.id}')">✏️ Edit</button>
+          <button class="btn btn-red btn-sm" onclick="deleteHH('${hh.id}')">🗑️ Delete</button>
+        </div>
+      </div>`;
+    } else {
+      // CH-only (no HH): Non-residential / Vacant / Locked
+      let isLocked = ch.locked;
+      let isVacant = q7 === '0';
+      let isNonRes = !['1','2'].includes(q7) && !isVacant;
+      let borderColor = isLocked ? '#555' : isVacant ? '#888' : '#e67e22';
+      let statusLabel = isLocked ? '🔒 LOCKED'
+        : isVacant ? '🚪 VACANT'
+        : isNonRes ? '🏢 NON-RESIDENTIAL'
+        : '📋 HH नहीं';
+      let statusBg = isLocked ? '#555' : isVacant ? '#888' : isNonRes ? '#e67e22' : '#f39c12';
+      let actualUse = ch.actual_use_desc ? `<div class="hh-sub">उपयोग: ${ch.actual_use_desc}</div>` : '';
+      return `<div class="hh-item" style="border-left:3px solid ${borderColor};background:#fafafa;">
+        <div class="hh-line">Line: <b>—</b> &nbsp;|&nbsp; CH: <b>${ch.ch_no}</b> &nbsp;|&nbsp; Building: <b>${ch.building_no}</b> &nbsp;|&nbsp; HH No: <b>—</b></div>
+        <div class="hh-detail" style="color:#555;">— (${q7Lbl})</div>
+        <div class="hh-sub">Q7: ${q7} (${q7Lbl})</div>
+        ${actualUse}
+        <div style="margin-top:4px;">
+          <span style="font-size:11px;font-weight:700;background:${statusBg};color:white;padding:3px 10px;border-radius:10px;">${statusLabel}</span>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:10px;">
+          <button class="btn btn-red btn-sm" onclick="deleteCH('${ch.id}')">🗑️ Delete CH</button>
+        </div>
+      </div>`;
+    }
+  }).join('');
 }
 
 // ============================================================
