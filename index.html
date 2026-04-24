@@ -327,12 +327,21 @@ canvas#sigCanvas { border: 1.5px solid var(--border); border-radius: 8px; displa
       <!-- Q2 Building Number -->
       <div class="question-block" style="padding:10px 0;">
         <div class="question-title">2. Building number (Q2)</div>
-        <div class="question-hint">Alpha-numeric: 1, A-12, 10/1 etc. — आप खुद भरें</div>
-        <input type="text" class="text-input" id="ch_q2_building" placeholder="e.g. 1, A-12, 10/1" oninput="onBuildingNoInput()">
-        <div style="margin-top:6px;display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="chRepeatBuilding()">📋 Same Building</button>
+        <div class="question-hint">Alpha-numeric: 1, A-12, 10/1 etc. — आप खुद भरें या नीचे से चुनें</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" class="text-input" id="ch_q2_building" placeholder="e.g. 1, A-12, 10/1" oninput="onBuildingNoInput()" style="flex:1;">
+          <button class="btn btn-outline btn-sm" onclick="toggleBuildingDropdown()" title="Existing Buildings देखें" style="white-space:nowrap;padding:10px 12px;">▼ Buildings</button>
+        </div>
+        <!-- Existing Buildings Dropdown -->
+        <div id="buildingDropdownPanel" style="display:none;margin-top:6px;border:1.5px solid var(--blue2);border-radius:8px;background:white;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+          <div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--blue2);border-bottom:1px solid var(--border);background:#f0f4ff;">📋 Existing Buildings (click to select)</div>
+          <div id="buildingDropdownList"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="chRepeatBuilding()">📋 Same as Last</button>
           <button class="btn btn-red btn-sm" onclick="chNewBuilding()">🆕 New Building</button>
         </div>
+        <div id="buildingStatusMsg" style="margin-top:6px;font-size:11px;font-weight:700;display:none;"></div>
       </div>
 
       <!-- MODE SELECTION: Existing CH या New CH -->
@@ -1173,11 +1182,15 @@ function gotoNewEntry() {
   clearCHForm();
   // pre-fill building number from last entry
   let lastB = appData.buildings && appData.buildings.length ? appData.buildings[appData.buildings.length-1] : null;
-  if(lastB) document.getElementById('ch_q2_building').value = lastB.building_no;
+  if(lastB) {
+    document.getElementById('ch_q2_building').value = lastB.building_no;
+    updateBuildingStatusMsg(lastB.building_no);
+  }
   let chNo = pad4(appData.nextCHNo);
   document.getElementById('chFormCHNo').innerText = chNo;
   document.getElementById('ch_q3_no').value = chNo;
   document.getElementById('chFormMode').innerText = '(New Entry)';
+  hideBuildingDropdown();
   showPage('pageCHForm');
 }
 function gotoUpdation() { showPage('pageUpdation'); }
@@ -1198,6 +1211,8 @@ function clearCHForm() {
   document.querySelectorAll('#pageCHForm input[type="radio"]').forEach(r=>r.checked=false);
   document.getElementById('ch_q2_building').value = '';
   let q3el = document.getElementById('ch_q3_no'); if(q3el) q3el.value = '';
+  let msg = document.getElementById('buildingStatusMsg'); if(msg) { msg.style.display='none'; msg.innerText=''; }
+  hideBuildingDropdown();
   // Set defaults
   document.getElementById('ch_locked_no').checked = true;
   document.getElementById('ch_inst_no').checked = true;
@@ -1218,6 +1233,8 @@ function chRepeatBuilding() {
   let lastB = appData.buildings && appData.buildings.length ? appData.buildings[appData.buildings.length-1] : null;
   if(lastB) {
     document.getElementById('ch_q2_building').value = lastB.building_no;
+    hideBuildingDropdown();
+    updateBuildingStatusMsg(lastB.building_no);
     toast('Building: ' + lastB.building_no);
     if(chFormMode === 'existing') populateExistingCHDropdown();
   }
@@ -1226,9 +1243,85 @@ function chRepeatBuilding() {
 function chNewBuilding() {
   document.getElementById('ch_q2_building').value = '';
   document.getElementById('ch_q2_building').focus();
+  hideBuildingDropdown();
+  // Clear status message
+  let msg = document.getElementById('buildingStatusMsg');
+  if(msg) { msg.style.display='none'; msg.innerText=''; }
   // Reset to new mode
   chModeSelect('new');
-  toast('नया Building number डालें');
+  toast('नया Building number डालें — Type करें और Next step चुनें');
+}
+
+function toggleBuildingDropdown() {
+  let panel = document.getElementById('buildingDropdownPanel');
+  if(!panel) return;
+  if(panel.style.display === 'none') {
+    renderBuildingDropdownList();
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+}
+function hideBuildingDropdown() {
+  let panel = document.getElementById('buildingDropdownPanel');
+  if(panel) panel.style.display = 'none';
+}
+
+function renderBuildingDropdownList() {
+  let list = document.getElementById('buildingDropdownList');
+  if(!list) return;
+  let buildings = appData.buildings || [];
+  if(!buildings.length) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px;">कोई Building नहीं — नया बनाएं</div>';
+    return;
+  }
+  let html = '';
+  buildings.forEach(b => {
+    let chCount = (b.census_houses||[]).length;
+    let hhCount = 0;
+    (b.census_houses||[]).forEach(ch => { hhCount += (ch.households||[]).length; });
+    html += `<div onclick="selectBuildingFromDropdown('${b.building_no}')" style="padding:10px 14px;border-bottom:1px solid #f0f0f5;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='white'">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--blue2);">🏗️ Building: ${b.building_no}</div>
+        <div style="font-size:11px;color:var(--muted);">${chCount} Census Houses | ${hhCount} Households</div>
+      </div>
+      <span style="font-size:18px;">→</span>
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+function selectBuildingFromDropdown(buildingNo) {
+  document.getElementById('ch_q2_building').value = buildingNo;
+  hideBuildingDropdown();
+  updateBuildingStatusMsg(buildingNo);
+  onBuildingNoInput();
+  // Auto-switch to existing CH mode since building already has data
+  let b = (appData.buildings||[]).find(x => x.building_no === buildingNo);
+  if(b && b.census_houses && b.census_houses.length > 0) {
+    chModeSelect('existing');
+    toast('Building ' + buildingNo + ' चुना — Census House चुनें');
+  } else {
+    chModeSelect('new');
+    toast('Building ' + buildingNo + ' चुना — नया CH बनाएं');
+  }
+}
+
+function updateBuildingStatusMsg(buildingNo) {
+  let msg = document.getElementById('buildingStatusMsg');
+  if(!msg) return;
+  if(!buildingNo) { msg.style.display='none'; return; }
+  let b = (appData.buildings||[]).find(x => x.building_no === buildingNo);
+  if(b) {
+    let chCount = (b.census_houses||[]).length;
+    msg.style.display = 'block';
+    msg.style.color = 'var(--blue2)';
+    msg.innerText = '✅ Existing Building — ' + chCount + ' Census House(s) already entered';
+  } else {
+    msg.style.display = 'block';
+    msg.style.color = 'var(--green)';
+    msg.innerText = '🆕 New Building — पहली बार enter हो रहा है';
+  }
 }
 
 // ============================================================
@@ -1258,6 +1351,9 @@ function chModeSelect(mode) {
 
 function onBuildingNoInput() {
   // When building number changes, refresh existing CH dropdown
+  let val = (document.getElementById('ch_q2_building').value || '').trim();
+  if(val) updateBuildingStatusMsg(val);
+  else { let msg = document.getElementById('buildingStatusMsg'); if(msg) msg.style.display='none'; }
   if(chFormMode === 'existing') populateExistingCHDropdown();
 }
 
@@ -1362,6 +1458,9 @@ function saveCHAndGotoHH() {
   }
 
   // ── NEW CH MODE ──────────────────────────────────────────
+  let buildingInput = document.getElementById('ch_q2_building').value.trim();
+  if(!buildingInput) { toast('⚠️ Building Number डालें (Q2)'); document.getElementById('ch_q2_building').focus(); return; }
+
   let q7 = getRadioVal('ch_q7');
   if(!q7) { toast('⚠️ Q7 (Use of Census House) जरूरी है'); return; }
 
@@ -1371,7 +1470,7 @@ function saveCHAndGotoHH() {
   let q4 = getRadioVal('ch_q4'), q5 = getRadioVal('ch_q5'), q6 = getRadioVal('ch_q6');
 
   tempCHData = {
-    building_no: document.getElementById('ch_q2_building').value.trim() || '—',
+    building_no: buildingInput,
     ch_no: pad4(appData.nextCHNo),
     q4, q5, q6,
     q7, q8: getRadioVal('ch_q8'),
@@ -1944,12 +2043,133 @@ function exportCSV() {
   dlBlob(new Blob(['\uFEFF'+csv],{type:'text/csv'}),'census_data.csv');
 }
 function exportExcel() {
-  let allHHs = getAllHHs();
-  if(!allHHs.length){toast('कोई डेटा नहीं');return;}
-  let keys = ['line_no','building_no','ch_no','family_no','q4','q5','q6','q7','q8','q10_members','q11_name','q17','q19','q20','q25','q34_mobile','status'];
-  let heads = ['Line No','Building No','CH No','HH No','Floor','Wall','Roof','Use','Condition','Members','Head Name','Water','Lighting','Latrine','Fuel','Mobile','Status'];
-  let html='<html><head><meta charset="UTF-8"></head><body><table border="1"><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+allHHs.map(r=>'<tr>'+keys.map(k=>'<td>'+(r[k]||'')+'</td>').join('')+'</tr>').join('')+'</table></body></html>';
-  dlBlob(new Blob([html],{type:'application/vnd.ms-excel'}),'census_data.xls');
+  let buildings = appData.buildings || [];
+  if(!buildings.length){toast('कोई डेटा नहीं');return;}
+
+  // Q labels for display
+  let q4L={1:'Mud',2:'Wood/Bamboo',3:'Burnt Brick',4:'Stone',5:'Cement',6:'Mosaic/Tiles',7:'Other'};
+  let q5L={1:'Grass/Thatch',2:'Plastic',3:'Mud/Unburnt Brick',4:'Wood',5:'Stone-no mortar',6:'Stone-mortar',7:'GI Sheet',8:'Burnt Brick',9:'Concrete',0:'Other'};
+  let q6L={1:'Grass/Thatch',2:'Plastic',3:'Hand Tiles',4:'Machine Tiles',5:'Burnt Brick',6:'Stone',7:'Slate',8:'GI Sheet',9:'Concrete',0:'Other'};
+  let q7L={1:'Residence',2:'Res+Other',3:'Shop/Office',4:'School',5:'Hotel',6:'Hospital',7:'Factory',8:'Worship',9:'Non-residential',0:'Vacant'};
+  let q8L={1:'Good',2:'Livable',3:'Dilapidated'};
+  let q12L={1:'Male',2:'Female',3:'Transgender'};
+  let q13L={1:'SC',2:'ST',3:'Other'};
+  let q14L={1:'Owned',2:'Rented-own elsewhere',3:'Rented-no own',4:'Other'};
+  let q17L={1:'Tap-treated',2:'Tap-untreated',3:'Well',4:'Hand Pump',5:'Tubewell',6:'Spring',7:'River/Canal',8:'Tank/Pond',9:'Packaged',0:'Other'};
+  let q18L={1:'Within premises',2:'Near premises',3:'Away'};
+  let q19L={1:'Electricity',2:'Kerosene',3:'Solar',4:'Other oil',5:'Gas',6:'Candle',7:'No light'};
+  let q20L={1:'Within premises',2:'Outside premises',3:'Open defecation'};
+  let q21L={1:'Flush/pour flush-sewer',2:'Flush-septic tank',3:'Flush-other',4:'Pit latrine ventilated',5:'Pit latrine slab',6:'Night soil removed',7:'Other'};
+  let q22L={1:'Underground drainage',2:'Open drainage',3:'No drainage'};
+  let q23L={1:'Within premises',2:'Outside',3:'No bathing facility'};
+  let q24L={1:'Yes-LPG',2:'Yes-Other',3:'No kitchen'};
+  let q25L={1:'Firewood',2:'Crop residue',3:'Cowdung cake',4:'Coal',5:'LPG/PNG',6:'Electricity',7:'Biogas',8:'Kerosene',9:'Other'};
+  let q26L={1:'Yes',2:'No'}; let q27L={1:'Yes',2:'No'}; let q28L={1:'Yes',2:'No'};
+  let q29L={1:'Yes',2:'No'}; let q30L={1:'Yes',2:'No'}; let q31L={1:'Bicycle',2:'Motorcycle',3:'Both',4:'None'};
+  let q32L={1:'Yes',2:'No'}; let q33L={1:'Rice',2:'Wheat',3:'Jowar',4:'Bajra',5:'Maize',6:'Other cereals',7:'No cereal'};
+
+  let lbl = (map, val) => val ? (map[val]||val) : '—';
+
+  // Sort buildings
+  let sortedBuildings = [...buildings].sort((a,b) => {
+    let na = parseInt(a.building_no) || a.building_no;
+    let nb = parseInt(b.building_no) || b.building_no;
+    return na < nb ? -1 : na > nb ? 1 : 0;
+  });
+
+  // Build rows sequentially: Building header → CH header → HH rows
+  let rows = [];
+
+  // Main header row
+  rows.push([
+    'Building No', 'CH No', 'HH No', 'Line No', 'Type',
+    'Q4-Floor', 'Q5-Wall', 'Q6-Roof', 'Q7-Use', 'Q8-Condition',
+    'CH Status', 'Head Name', 'Sex', 'SC/ST/Other', 'Total Members',
+    'Ownership', 'Rooms', 'Couples', 'Water Source', 'Water Availability',
+    'Lighting', 'Latrine Access', 'Latrine Type', 'Waste Water', 'Bathing',
+    'Kitchen', 'Main Fuel', 'Radio', 'TV', 'Internet',
+    'Laptop/PC', 'Phone', 'Bicycle/Motorcycle', 'Car/Jeep', 'Main Cereal',
+    'Mobile No', 'SE ID', 'Status', 'Date/Time'
+  ]);
+
+  sortedBuildings.forEach(building => {
+    let sortedCHs = [...(building.census_houses||[])].sort((a,b)=>parseInt(a.ch_no)-parseInt(b.ch_no));
+    sortedCHs.forEach(ch => {
+      let chStatus = ch.locked ? 'LOCKED' : (ch.q7==='0' ? 'VACANT' : (ch.institutional ? 'INSTITUTIONAL' : 'NORMAL'));
+      if(ch.locked || (ch.q7==='0' && !(ch.households||[]).length)) {
+        // Locked/Vacant CH with no HH — still show one row
+        rows.push([
+          building.building_no, ch.ch_no, '—', '—', chStatus,
+          lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), lbl(q8L,ch.q8),
+          chStatus, '—','—','—','—','—','—','—','—','—',
+          '—','—','—','—','—','—','—','—','—','—',
+          '—','—','—','—','—','—','—',chStatus,'—'
+        ]);
+      }
+      let sortedHHs = [...(ch.households||[])].sort((a,b)=>{
+        if(a.family_no==='999') return 1; if(b.family_no==='999') return -1;
+        return parseInt(a.family_no)-parseInt(b.family_no);
+      });
+      sortedHHs.forEach(hh => {
+        rows.push([
+          building.building_no, ch.ch_no, hh.family_no, hh.line_no, chStatus,
+          lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), lbl(q8L,ch.q8),
+          chStatus,
+          hh.q11_name||'—', lbl(q12L,hh.q12), lbl(q13L,hh.q13), hh.q10_members||'—',
+          lbl(q14L,hh.q14), hh.q15_rooms||'—', hh.q16_couples||'—',
+          lbl(q17L,hh.q17), lbl(q18L,hh.q18), lbl(q19L,hh.q19),
+          lbl(q20L,hh.q20), lbl(q21L,hh.q21), lbl(q22L,hh.q22), lbl(q23L,hh.q23),
+          lbl(q24L,hh.q24), lbl(q25L,hh.q25), lbl(q26L,hh.q26), lbl(q27L,hh.q27),
+          lbl(q28L,hh.q28), lbl(q29L,hh.q29), lbl(q30L,hh.q30), lbl(q31L,hh.q31),
+          lbl(q32L,hh.q32), lbl(q33L,hh.q33),
+          hh.q34_mobile||'—', hh.se_id||'—', hh.status||'—',
+          hh.timestamp ? hh.timestamp.replace('T',' ').substr(0,19) : '—'
+        ]);
+      });
+    });
+  });
+
+  // Create Excel HTML with styling
+  let headerStyle = 'background:#1e3c72;color:white;font-weight:bold;padding:6px 8px;border:1px solid #333;font-size:11px;white-space:nowrap;';
+  let cellStyle = 'padding:5px 8px;border:1px solid #ddd;font-size:11px;';
+  let buildingCellStyle = 'padding:5px 8px;border:1px solid #ddd;font-size:11px;background:#e8eef8;font-weight:bold;color:#1e3c72;';
+  let chCellStyle = 'padding:5px 8px;border:1px solid #ddd;font-size:11px;background:#f0f7ff;font-weight:600;';
+
+  let headerRow = rows[0];
+  let dataRows = rows.slice(1);
+  let prevBuilding = null, prevCH = null;
+
+  let tableRows = '';
+  dataRows.forEach(row => {
+    let isNewBuilding = row[0] !== prevBuilding;
+    let isNewCH = isNewBuilding || row[1] !== prevCH;
+    let rowStyle = isNewBuilding ? 'border-top:2px solid #1e3c72;' : (isNewCH ? 'border-top:1.5px solid #90afd4;' : '');
+    let cells = row.map((cell, i) => {
+      let style = i===0 ? buildingCellStyle : (i===1 ? chCellStyle : cellStyle);
+      if(rowStyle && i===0) style += rowStyle;
+      return `<td style="${style}">${cell}</td>`;
+    }).join('');
+    tableRows += `<tr>${cells}</tr>`;
+    prevBuilding = row[0];
+    prevCH = row[1];
+  });
+
+  let cfg = appData.config || {};
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<style>table{border-collapse:collapse;} th,td{font-family:Calibri,Arial,sans-serif;}</style>
+</head><body>
+<p style="font-size:14px;font-weight:bold;margin-bottom:4px;">जनगणना 2027 — Census Data Export</p>
+<p style="font-size:11px;margin-bottom:8px;">HLO: ${cfg.name||'—'} | Block: ${cfg.hlb||'—'} | Ward: ${cfg.ward||'—'} | Village: ${cfg.village||'—'} | District: ${cfg.district||'—'} | Exported: ${new Date().toLocaleString('hi-IN')}</p>
+<table>
+<tr>${headerRow.map(h=>`<th style="${headerStyle}">${h}</th>`).join('')}</tr>
+${tableRows}
+</table>
+<p style="font-size:10px;margin-top:8px;color:#666;">Total Buildings: ${sortedBuildings.length} | Generated by HLO Training App</p>
+</body></html>`;
+
+  dlBlob(new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'}),'census_data_sequential_'+new Date().toISOString().slice(0,10)+'.xls');
+  toast('✅ Excel exported — Sequential order');
 }
 function exportJSON() { dlBlob(new Blob([JSON.stringify(appData,null,2)],{type:'application/json'}),'census_backup_'+Date.now()+'.json'); }
 function importJSON(input) {
