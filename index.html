@@ -450,18 +450,19 @@ canvas#sigCanvas {
     <div class="question-block">
       <div class="question-title">2. Building number</div>
       <input type="text" class="text-input" id="q2_building" placeholder="Enter building number">
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Press Repeat if Building Number is same</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">पिछला Building Number auto-fill होता है। Same रहे तो छोड़ें, नया हो तो "New" दबाएं।</div>
       <div style="margin-top:6px;display:flex;gap:8px;">
-        <button class="btn btn-outline btn-sm" onclick="repeatBuilding()">Repeat</button>
-        <button class="btn btn-blue btn-sm" onclick="newBuilding()">New</button>
+        <button class="btn btn-outline btn-sm" onclick="repeatBuilding()">Repeat / Same</button>
+        <button class="btn btn-red btn-sm" onclick="newBuilding()">New Building</button>
       </div>
     </div>
     <!-- Q3 -->
     <div class="question-block">
       <div class="question-title">3. Census house number <span id="q3_display" style="color:var(--blue2);"></span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Same building में एक और घर जोड़ने के लिए "Repeat CH" दबाएं। नया मकान है तो "New CH" दबाएं।</div>
       <div style="margin-top:6px;display:flex;gap:8px;">
-        <button class="btn btn-outline btn-sm" onclick="repeatCH()">Repeat</button>
-        <button class="btn btn-blue btn-sm" onclick="newCH()">New</button>
+        <button class="btn btn-outline btn-sm" onclick="repeatCH()">Repeat CH</button>
+        <button class="btn btn-blue btn-sm" onclick="newCH()">New CH</button>
       </div>
     </div>
     <!-- Q4 -->
@@ -1099,6 +1100,11 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 // ============================================================
 function gotoNewEntry() {
   currentEditId = null;
+  // Remember last building number before clearing
+  let lastBuilding = '';
+  if(appData.records.length > 0) {
+    lastBuilding = appData.records[appData.records.length - 1].q2_building || '';
+  }
   clearForm();
   let lineNo = String(appData.nextLineNo).padStart(3,'0');
   let chNo = String(appData.nextCHNo).padStart(4,'0');
@@ -1108,6 +1114,10 @@ function gotoNewEntry() {
   document.getElementById('q1_display').innerText = lineNo;
   document.getElementById('q3_display').innerText = chNo;
   document.getElementById('q9_hhno').value = hhNo;
+  // Auto-carry last building number (user can clear with "New Building" btn)
+  if(lastBuilding) {
+    document.getElementById('q2_building').value = lastBuilding;
+  }
   showPage('pageHLOForm');
 }
 function gotoUpdation() { showPage('pageUpdation'); }
@@ -1128,26 +1138,39 @@ function clearForm() {
   document.getElementById('sigConfirmCheck') && (document.getElementById('sigConfirmCheck').checked=false);
 }
 function repeatBuilding() {
+  // Keep current value (already auto-filled), or pull from last record
   let recs = appData.records;
-  if(recs.length>0) {
-    document.getElementById('q2_building').value = recs[recs.length-1].q2_building || '';
-    toast('Building number repeated');
+  let building = document.getElementById('q2_building').value;
+  if(!building && recs.length > 0) {
+    building = recs[recs.length-1].q2_building || '';
+    document.getElementById('q2_building').value = building;
   }
+  toast('Building number: ' + (building || '(blank)'));
 }
-function newBuilding() { document.getElementById('q2_building').value=''; }
+function newBuilding() {
+  document.getElementById('q2_building').value = '';
+  document.getElementById('q2_building').focus();
+  toast('Enter new building number');
+}
 function repeatCH() {
+  // Repeat same CH number (same census house, multiple households)
   let recs = appData.records;
-  if(recs.length>0) {
-    document.getElementById('formCHNo').innerText = recs[recs.length-1].ch_no || String(appData.nextCHNo).padStart(4,'0');
-    document.getElementById('q3_display').innerText = document.getElementById('formCHNo').innerText;
-    toast('CH number repeated');
+  if(recs.length > 0) {
+    let lastCH = recs[recs.length-1].ch_no || String(appData.nextCHNo).padStart(4,'0');
+    document.getElementById('formCHNo').innerText = lastCH;
+    document.getElementById('q3_display').innerText = lastCH;
+    // Also revert nextCHNo so it doesn't skip when saving
+    appData.nextCHNo = parseInt(lastCH);
+    toast('CH number repeated: ' + lastCH);
   }
 }
 function newCH() {
+  // Increment CH number for a new census house
   appData.nextCHNo++;
   let chNo = String(appData.nextCHNo).padStart(4,'0');
   document.getElementById('formCHNo').innerText = chNo;
   document.getElementById('q3_display').innerText = chNo;
+  toast('New CH: ' + chNo);
 }
 
 function getRadioVal(name) {
@@ -1238,6 +1261,10 @@ function saveAndSync() {
     appData.records.push(r);
     appData.nextLineNo++;
     appData.nextHHNo++;
+    // nextCHNo stays at current CH — user will press "New" for next CH
+    // Save the current CH as the last used CH for reference
+    appData.lastCHNo = parseInt(r.ch_no) || appData.nextCHNo;
+    appData.nextCHNo = appData.lastCHNo; // keep in sync
   }
   save();
   currentEditId = null;
