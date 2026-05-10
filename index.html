@@ -15,7 +15,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   const firebaseConfig = {
     apiKey: "AIzaSyDI9W9gEzOsMdjSKMwVTNm-T6c8vQXeg-g",
     authDomain: "census27-94315.firebaseapp.com",
@@ -38,10 +38,22 @@
     window._fbDeleteDoc = deleteDoc;
     window._fbAuth = auth;
     window._fbProvider = provider;
-    window._fbSignInWithPopup = signInWithPopup;
+    window._fbSignInWithRedirect = signInWithRedirect;
+    window._fbGetRedirectResult = getRedirectResult;
     window._fbSignOut = signOut;
     window._fbOnAuthStateChanged = onAuthStateChanged;
     window._fbReady = true;
+
+    // First check if returning from Google redirect
+    try {
+      const result = await getRedirectResult(auth);
+      // result will be non-null only right after redirect
+      if (result && result.user) {
+        // onAuthStateChanged will fire and handle it
+      }
+    } catch(e) {
+      console.error('Redirect result error:', e);
+    }
 
     // Auth state listener
     onAuthStateChanged(auth, async (user) => {
@@ -1699,18 +1711,16 @@ canvas#sigCanvas {
 // ============================================================
 // DATA STRUCTURE — Book ke anusar (Building → CH → HH)
 // ============================================================
-let appData = {
-  buildings: [],
-  // buildings[]: { id, building_no, census_houses[]: {
-  //   id, ch_no, q4,q5,q6,q7,q8, locked, institutional, households[]: {
-  //     id, line_no, family_no, ...all q fields, status, synced, timestamp
-  //   }
-  // }}
-  config: { name: 'प्रगणक', hlb: 'HLB-001', ward: '', village: '', district: '', target: 100 },
-  nextLineNo: 1,   // HLB-wide counter
-  nextCHNo: 1,     // HLB-wide counter
-  nextHHNo: 1,     // HLB-wide global HH counter (sequential across all buildings/CHs)
-};
+function _freshAppData() {
+  return {
+    buildings: [],
+    config: { name: 'प्रगणक', hlb: 'HLB-001', ward: '', village: '', district: '', target: 100 },
+    nextLineNo: 1,
+    nextCHNo: 1,
+    nextHHNo: 1,
+  };
+}
+let appData = _freshAppData();
 
 // Current form state
 let currentCHId = null;     // CH being added to (when adding HH)
@@ -1737,12 +1747,14 @@ let sigDrawing = false, sigLastX, sigLastY;
 // SAVE / LOAD
 // ============================================================
 function save() { 
-  const key = window._userUID ? ('census2027v3_' + window._userUID) : 'census2027v3';
+  if (!window._userUID) return; // Safety: never save without UID
+  const key = 'census2027v3_' + window._userUID;
   localStorage.setItem(key, JSON.stringify(appData)); 
   refreshStats(); 
 }
 function load() {
-  const key = window._userUID ? ('census2027v3_' + window._userUID) : 'census2027v3';
+  if (!window._userUID) { refreshStats(); loadConfigForm(); return; } // Safety
+  const key = 'census2027v3_' + window._userUID;
   let d = localStorage.getItem(key);
   // Try v2 migration
   if(!d) {
@@ -3444,13 +3456,16 @@ function showAuthScreen() {
 async function doGoogleLogin() {
   if (!window._fbReady) { alert('Firebase not configured'); return; }
   try {
-    await window._fbSignInWithPopup(window._fbAuth, window._fbProvider);
-    // onAuthStateChanged will handle the rest
+    // Show loading state
+    const btn = document.querySelector('.btn-google');
+    if (btn) { btn.textContent = '⏳ Redirecting...'; btn.disabled = true; }
+    await window._fbSignInWithRedirect(window._fbAuth, window._fbProvider);
+    // Page will redirect to Google and come back
   } catch(e) {
     console.error('Login error:', e);
-    if (e.code !== 'auth/popup-closed-by-user') {
-      alert('Login failed: ' + e.message);
-    }
+    alert('Login failed: ' + e.message);
+    const btn = document.querySelector('.btn-google');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Google से Login करें'; }
   }
 }
 
@@ -3458,8 +3473,15 @@ async function doSignOut() {
   if (!window._fbReady) return;
   try {
     await window._fbSignOut(window._fbAuth);
+    // Clear all user state
     window._currentUser = null;
+    window._userUID = null;
+    window._isAdmin = false;
+    appData = _freshAppData();
     document.getElementById('authPending').style.display = 'none';
+    document.getElementById('userInfoBar').style.display = 'none';
+    const adminBtn = document.getElementById('btnAdminPanel');
+    if (adminBtn) adminBtn.style.display = 'none';
     showAuthScreen();
   } catch(e) { console.error(e); }
 }
@@ -3532,9 +3554,13 @@ function grantAccess(user, isAdmin) {
   const adminBtn = document.getElementById('btnAdminPanel');
   if (isAdmin && adminBtn) adminBtn.style.display = 'inline-flex';
 
-  // Store user uid in save/load key so each user has separate data
+  // ⚠️ CRITICAL: Set UID FIRST, then reset appData, then load
   window._userUID = user.uid;
   window._isAdmin = isAdmin;
+
+  // Reset appData to fresh state before loading this user's data
+  // This prevents data leakage between users
+  appData = _freshAppData();
 
   // Update firebase sync to use user-specific paths
   updateFirebasePaths(user.uid);
@@ -3543,6 +3569,7 @@ function grantAccess(user, isAdmin) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('pageHome').classList.add('active');
 
+  // Now safe to load — _userUID is set, appData is clean
   appInit();
 }
 
