@@ -4,10 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>जनगणना 2027 - HLO Data App</title>
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#2c3e9e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HLO Census">
+<link rel="manifest" id="pwaManifest">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -19,10 +27,37 @@
   try {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window._fbDB = db; window._fbSetDoc = setDoc; window._fbDoc = doc;
-    window._fbCollection = collection; window._fbGetDocs = getDocs;
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    window._fbDB = db;
+    window._fbSetDoc = setDoc;
+    window._fbDoc = doc;
+    window._fbCollection = collection;
+    window._fbGetDocs = getDocs;
+    window._fbGetDoc = getDoc;
+    window._fbDeleteDoc = deleteDoc;
+    window._fbAuth = auth;
+    window._fbProvider = provider;
+    window._fbSignInWithPopup = signInWithPopup;
+    window._fbSignOut = signOut;
+    window._fbOnAuthStateChanged = onAuthStateChanged;
     window._fbReady = true;
-  } catch(e) { window._fbReady = false; }
+
+    // Auth state listener
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        window._currentUser = user;
+        await handleAuthUser(user);
+      } else {
+        window._currentUser = null;
+        showAuthScreen();
+      }
+    });
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    window._fbReady = false;
+    showAuthScreen();
+  }
 </script>
 <style>
 /* ===== REAL HLO APP STYLE - EXACT MATCH ===== */
@@ -430,6 +465,106 @@ canvas#sigCanvas {
 .toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(44,62,158,0.94); color: white; padding: 11px 22px; border-radius: 40px; font-size: 12px; z-index: 300; white-space: nowrap; animation: toastIn 0.3s ease; }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
+/* ===== AUTH SCREEN ===== */
+#authScreen {
+  position: fixed; inset: 0; background: var(--hlo-blue);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 9999; padding: 24px;
+}
+#authScreen .auth-logo { font-size: 56px; margin-bottom: 16px; }
+#authScreen h1 { color: white; font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+#authScreen p { color: rgba(255,255,255,0.75); font-size: 13px; text-align: center; margin-bottom: 32px; }
+.auth-card {
+  background: white; border-radius: 20px; padding: 28px 24px;
+  width: 100%; max-width: 340px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.auth-card h2 { font-size: 16px; font-weight: 700; color: #1a237e; margin-bottom: 8px; }
+.auth-card p { font-size: 12px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: white; border: 2px solid #e0e0e0; border-radius: 12px;
+  padding: 13px 20px; width: 100%; font-size: 14px; font-weight: 600;
+  color: #333; cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.btn-google:hover { border-color: #4285f4; background: #f8f9ff; }
+.btn-google svg { width: 20px; height: 20px; }
+#authPending {
+  position: fixed; inset: 0; background: rgba(44,62,158,0.97);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 9999; padding: 24px; text-align: center;
+}
+#authPending .pending-icon { font-size: 64px; margin-bottom: 16px; }
+#authPending h2 { color: white; font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+#authPending p { color: rgba(255,255,255,0.8); font-size: 13px; line-height: 1.7; margin-bottom: 24px; }
+#authPending .pending-email {
+  background: rgba(255,255,255,0.15); border-radius: 10px;
+  padding: 10px 18px; color: white; font-size: 13px; font-weight: 600;
+  margin-bottom: 20px;
+}
+#authPending .btn-signout-pending {
+  background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.5);
+  border-radius: 10px; padding: 10px 24px; color: white; font-size: 13px;
+  cursor: pointer; margin-top: 8px;
+}
+
+/* ===== ADMIN PANEL PAGE ===== */
+#pageAdmin .admin-section { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 5px rgba(0,0,0,0.08); }
+#pageAdmin .admin-section h3 { font-size: 14px; font-weight: 700; color: var(--hlo-blue); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1.5px solid #eee; }
+.req-card {
+  background: #f8f9ff; border-radius: 10px; padding: 12px 14px;
+  margin-bottom: 10px; border: 1.5px solid #e0e4f8;
+}
+.req-card .req-name { font-size: 14px; font-weight: 700; color: #1a237e; }
+.req-card .req-email { font-size: 12px; color: #555; margin: 2px 0 8px; }
+.req-card .req-time { font-size: 11px; color: #999; margin-bottom: 8px; }
+.req-card .req-actions { display: flex; gap: 8px; }
+.req-card .btn-approve {
+  flex: 1; background: #2e7d32; color: white; border: none;
+  border-radius: 8px; padding: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.req-card .btn-reject {
+  flex: 1; background: #c62828; color: white; border: none;
+  border-radius: 8px; padding: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.user-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.user-row:last-child { border-bottom: none; }
+.user-avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--hlo-blue2);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 16px; flex-shrink: 0;
+}
+.user-info { flex: 1; }
+.user-info .u-name { font-size: 13px; font-weight: 700; }
+.user-info .u-email { font-size: 11px; color: #666; }
+.user-info .u-badge { font-size: 10px; color: white; background: var(--hlo-blue2); border-radius: 4px; padding: 1px 6px; display: inline-block; margin-top: 2px; }
+.btn-revoke {
+  background: #ffebee; color: #c62828; border: 1.5px solid #ffcdd2;
+  border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+}
+.admin-badge {
+  position: fixed; top: 56px; right: 0; left: 0;
+  background: #e8f5e9; color: #2e7d32; font-size: 11px; font-weight: 700;
+  text-align: center; padding: 4px; z-index: 50; border-bottom: 1px solid #c8e6c9;
+  display: none;
+}
+/* User info bar in home */
+#userInfoBar {
+  background: #e8eaf6; padding: 8px 14px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid #c5cae9;
+}
+#userInfoBar img { width: 28px; height: 28px; border-radius: 50%; }
+#userInfoBar .ui-name { font-size: 12px; font-weight: 700; flex: 1; color: #1a237e; }
+#userInfoBar .btn-logout-sm {
+  background: none; border: 1px solid #9fa8da; border-radius: 6px;
+  padding: 4px 10px; font-size: 11px; color: #3949ab; cursor: pointer;
+}
+
 /* ---- ANALYSIS TABLE ---- */
 .analysis-table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .analysis-table th { background: var(--hlo-blue); color: white; padding: 7px 5px; text-align: left; }
@@ -571,7 +706,81 @@ canvas#sigCanvas {
 <body>
 
 <!-- ==================== PAGE: HOME ==================== -->
+<!-- ===== AUTH SCREEN ===== -->
+<div id="authScreen" style="display:none;">
+  <div class="auth-logo">🇮🇳</div>
+  <h1>जनगणना 2027</h1>
+  <p>HLO Data Collection App</p>
+  <div class="auth-card">
+    <h2>Login करें</h2>
+    <p>इस app को use करने के लिए Google account से login करें। Admin आपकी request approve करेगा।</p>
+    <button class="btn-google" onclick="doGoogleLogin()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Google से Login करें
+    </button>
+  </div>
+</div>
+
+<!-- ===== PENDING APPROVAL SCREEN ===== -->
+<div id="authPending" style="display:none;">
+  <div class="pending-icon">⏳</div>
+  <h2>Request Pending</h2>
+  <p>आपकी login request admin को भेज दी गई है।<br>Admin approve करने के बाद आप app use कर पाएंगे।<br><br>Page refresh करके check करें।</p>
+  <div class="pending-email" id="pendingEmailShow">—</div>
+  <button class="btn-signout-pending" onclick="doSignOut()">🔄 दूसरे Account से Try करें</button>
+  <button class="btn-signout-pending" onclick="checkApprovalStatus()" style="margin-top:8px;">🔃 Status Check करें</button>
+</div>
+
+<!-- ===== ADMIN PANEL PAGE ===== -->
+<div id="pageAdmin" class="page">
+  <div class="app-header">
+    <button class="back-btn" onclick="showPage('pageHome')">←</button>
+    <h2>👑 Admin Panel</h2>
+    <button class="home-btn" onclick="showPage('pageHome')">🏠</button>
+  </div>
+  <div class="content page-content-padded" style="padding-top:10px;">
+
+    <!-- Pending Requests -->
+    <div class="admin-section">
+      <h3>⏳ Pending Requests (<span id="adminPendingCount">0</span>)</h3>
+      <div id="adminPendingList">
+        <p style="font-size:12px;color:#999;text-align:center;padding:12px;">Loading...</p>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadAdminData()" style="margin-top:8px;">🔃 Refresh</button>
+    </div>
+
+    <!-- Approved Users -->
+    <div class="admin-section">
+      <h3>✅ Approved Users (<span id="adminApprovedCount">0</span>)</h3>
+      <div id="adminApprovedList">
+        <p style="font-size:12px;color:#999;text-align:center;padding:12px;">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Admin Info -->
+    <div class="admin-section" style="background:#fff8e1;">
+      <h3 style="color:#e65100;">ℹ️ Admin Info</h3>
+      <p style="font-size:12px;color:#555;line-height:1.7;">
+        Admin Email: <strong>amitsinghtomar12134@gmail.com</strong><br>
+        Admin का data अलग Firestore path में store होता है।<br>
+        हर user का data path: <code>users/{uid}/census2027</code>
+      </p>
+    </div>
+  </div>
+</div>
+
 <div id="pageHome" class="page active">
+  <!-- User Info Bar -->
+  <div id="userInfoBar" style="display:none;">
+    <img id="userAvatar" src="" alt="user" onerror="this.style.display='none'">
+    <span class="ui-name" id="userName">—</span>
+    <button class="btn-logout-sm" onclick="doSignOut()">Logout</button>
+  </div>
   <div class="home-header">
     <h1>🇮🇳 जनगणना 2027</h1>
     <p>Houselisting &amp; Housing Census — HLO App</p>
@@ -634,6 +843,7 @@ canvas#sigCanvas {
       <button class="btn btn-outline btn-sm" onclick="exportCSV()">📄 CSV</button>
       <button class="btn btn-outline btn-sm" onclick="exportJSON()">💾 Backup</button>
       <label class="btn btn-outline btn-sm" style="cursor:pointer;">📂 Restore<input type="file" accept=".json" style="display:none;" onchange="importJSON(this)"></label>
+      <button class="btn btn-outline btn-sm" id="btnAdminPanel" onclick="openAdminPanel()" style="display:none;background:#1a237e;color:white;border-color:#1a237e;">👑 Admin</button>
     </div>
 
     <div style="margin-top:12px;font-size:10px;color:var(--muted);text-align:center;">
@@ -1526,9 +1736,14 @@ let sigDrawing = false, sigLastX, sigLastY;
 // ============================================================
 // SAVE / LOAD
 // ============================================================
-function save() { localStorage.setItem('census2027v3', JSON.stringify(appData)); refreshStats(); }
+function save() { 
+  const key = window._userUID ? ('census2027v3_' + window._userUID) : 'census2027v3';
+  localStorage.setItem(key, JSON.stringify(appData)); 
+  refreshStats(); 
+}
 function load() {
-  let d = localStorage.getItem('census2027v3');
+  const key = window._userUID ? ('census2027v3_' + window._userUID) : 'census2027v3';
+  let d = localStorage.getItem(key);
   // Try v2 migration
   if(!d) {
     let old = localStorage.getItem('census2027v2');
@@ -3206,8 +3421,342 @@ function toast(msg) {
 // ============================================================
 // INIT
 // ============================================================
-load();
-initSignature();
+// Auth is handled by Firebase onAuthStateChanged listener in the module script
+// load() and initSignature() are called after auth verification
+function appInit() {
+  load();
+  initSignature();
+}
+
+// ============================================================
+// AUTH SYSTEM
+// ============================================================
+const ADMIN_EMAIL = 'amitsinghtomar12134@gmail.com';
+
+function showAuthScreen() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('authPending').style.display = 'none';
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+}
+
+async function doGoogleLogin() {
+  if (!window._fbReady) { alert('Firebase not configured'); return; }
+  try {
+    await window._fbSignInWithPopup(window._fbAuth, window._fbProvider);
+    // onAuthStateChanged will handle the rest
+  } catch(e) {
+    console.error('Login error:', e);
+    if (e.code !== 'auth/popup-closed-by-user') {
+      alert('Login failed: ' + e.message);
+    }
+  }
+}
+
+async function doSignOut() {
+  if (!window._fbReady) return;
+  try {
+    await window._fbSignOut(window._fbAuth);
+    window._currentUser = null;
+    document.getElementById('authPending').style.display = 'none';
+    showAuthScreen();
+  } catch(e) { console.error(e); }
+}
+
+async function handleAuthUser(user) {
+  const email = user.email;
+  const uid = user.uid;
+
+  // Admin gets direct access
+  if (email === ADMIN_EMAIL) {
+    grantAccess(user, true);
+    return;
+  }
+
+  // Check if already approved
+  try {
+    const approvedRef = window._fbDoc(window._fbDB, 'accessControl', 'approved', 'users', uid);
+    const approvedSnap = await window._fbGetDoc(approvedRef);
+    if (approvedSnap.exists()) {
+      grantAccess(user, false);
+      return;
+    }
+
+    // Not approved — add to pending requests if not already there
+    const pendingRef = window._fbDoc(window._fbDB, 'accessControl', 'pending', 'requests', uid);
+    const pendingSnap = await window._fbGetDoc(pendingRef);
+    if (!pendingSnap.exists()) {
+      await window._fbSetDoc(pendingRef, {
+        uid: uid,
+        email: email,
+        name: user.displayName || email,
+        photo: user.photoURL || '',
+        requestedAt: new Date().toISOString()
+      });
+    }
+
+    // Show pending screen
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('authPending').style.display = 'flex';
+    document.getElementById('pendingEmailShow').textContent = email;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+  } catch(e) {
+    console.error('Auth check error:', e);
+    // Firebase not configured — allow access in dev mode
+    grantAccess(user, false);
+  }
+}
+
+async function checkApprovalStatus() {
+  if (!window._currentUser) return;
+  toast('🔃 Checking...');
+  await handleAuthUser(window._currentUser);
+}
+
+function grantAccess(user, isAdmin) {
+  // Hide auth screens
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('authPending').style.display = 'none';
+
+  // Show user info bar
+  const bar = document.getElementById('userInfoBar');
+  bar.style.display = 'flex';
+  const avatarEl = document.getElementById('userAvatar');
+  if (user.photoURL) { avatarEl.src = user.photoURL; avatarEl.style.display = 'block'; }
+  else { avatarEl.style.display = 'none'; }
+  document.getElementById('userName').textContent = user.displayName || user.email;
+
+  // Show admin button if admin
+  const adminBtn = document.getElementById('btnAdminPanel');
+  if (isAdmin && adminBtn) adminBtn.style.display = 'inline-flex';
+
+  // Store user uid in save/load key so each user has separate data
+  window._userUID = user.uid;
+  window._isAdmin = isAdmin;
+
+  // Update firebase sync to use user-specific paths
+  updateFirebasePaths(user.uid);
+
+  // Activate home page
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('pageHome').classList.add('active');
+
+  appInit();
+}
+
+function updateFirebasePaths(uid) {
+  // Override firebase sync functions to use user-specific paths
+  const originalSync = window.syncFromFirebase;
+  const originalPush = window.pushToFirebase;
+
+  window.syncFromFirebase = async function() {
+    if (!window._fbReady) { toast('Firebase not configured'); return; }
+    try {
+      const userDocRef = window._fbDoc(window._fbDB, 'users', uid, 'censusData', 'main');
+      const snap = await window._fbGetDoc(userDocRef);
+      if (snap.exists()) {
+        appData = snap.data();
+        save();
+        refreshStats();
+        toast('✅ Sync complete');
+      } else {
+        toast('ℹ️ No data on server yet');
+      }
+    } catch(e) { toast('⚠️ Sync failed'); console.error(e); }
+  };
+
+  window.pushToFirebase = async function() {
+    if (!window._fbReady) { toast('Firebase not configured'); return; }
+    try {
+      const userDocRef = window._fbDoc(window._fbDB, 'users', uid, 'censusData', 'main');
+      await window._fbSetDoc(userDocRef, appData);
+      save();
+      toast('✅ Push complete');
+    } catch(e) { toast('⚠️ Push failed'); console.error(e); }
+  };
+}
+
+// ============================================================
+// ADMIN PANEL FUNCTIONS
+// ============================================================
+function openAdminPanel() {
+  if (!window._isAdmin) { toast('❌ Admin only'); return; }
+  showPage('pageAdmin');
+  loadAdminData();
+}
+
+async function loadAdminData() {
+  if (!window._fbReady) { toast('Firebase not configured'); return; }
+
+  // Load pending requests
+  const pendingList = document.getElementById('adminPendingList');
+  const approvedList = document.getElementById('adminApprovedList');
+  pendingList.innerHTML = '<p style="font-size:12px;color:#999;text-align:center;padding:12px;">Loading...</p>';
+  approvedList.innerHTML = '<p style="font-size:12px;color:#999;text-align:center;padding:12px;">Loading...</p>';
+
+  try {
+    // Pending requests
+    const pendingSnap = await window._fbGetDocs(
+      window._fbCollection(window._fbDB, 'accessControl', 'pending', 'requests')
+    );
+    let pendingHTML = '';
+    let pendingCount = 0;
+    pendingSnap.forEach(d => {
+      const r = d.data();
+      pendingCount++;
+      pendingHTML += `
+        <div class="req-card">
+          <div class="req-name">${r.name || '—'}</div>
+          <div class="req-email">${r.email}</div>
+          <div class="req-time">📅 ${r.requestedAt ? r.requestedAt.replace('T',' ').substr(0,16) : '—'}</div>
+          <div class="req-actions">
+            <button class="btn-approve" onclick="approveUser('${r.uid}','${r.email}','${(r.name||'').replace(/'/g,"\\'")}','${r.photo||''}')">✅ Approve</button>
+            <button class="btn-reject" onclick="rejectUser('${r.uid}','${r.email}')">❌ Reject</button>
+          </div>
+        </div>`;
+    });
+    document.getElementById('adminPendingCount').textContent = pendingCount;
+    pendingList.innerHTML = pendingHTML || '<p style="font-size:12px;color:#999;text-align:center;padding:12px;">कोई pending request नहीं</p>';
+
+    // Approved users
+    const approvedSnap = await window._fbGetDocs(
+      window._fbCollection(window._fbDB, 'accessControl', 'approved', 'users')
+    );
+    let approvedHTML = '';
+    let approvedCount = 0;
+    approvedSnap.forEach(d => {
+      const r = d.data();
+      approvedCount++;
+      const isAdm = r.email === ADMIN_EMAIL;
+      approvedHTML += `
+        <div class="user-row">
+          <div class="user-avatar">${(r.name||'U')[0].toUpperCase()}</div>
+          <div class="user-info">
+            <div class="u-name">${r.name || '—'}</div>
+            <div class="u-email">${r.email}</div>
+            ${isAdm ? '<span class="u-badge">ADMIN</span>' : ''}
+          </div>
+          ${!isAdm ? `<button class="btn-revoke" onclick="revokeUser('${r.uid}','${r.email}')">Revoke</button>` : ''}
+        </div>`;
+    });
+    document.getElementById('adminApprovedCount').textContent = approvedCount;
+    approvedList.innerHTML = approvedHTML || '<p style="font-size:12px;color:#999;text-align:center;padding:12px;">कोई approved user नहीं</p>';
+
+  } catch(e) {
+    console.error('Admin load error:', e);
+    pendingList.innerHTML = '<p style="font-size:12px;color:#e53935;text-align:center;padding:12px;">Error loading data</p>';
+  }
+}
+
+async function approveUser(uid, email, name, photo) {
+  if (!window._fbReady) return;
+  try {
+    // Add to approved
+    const approvedRef = window._fbDoc(window._fbDB, 'accessControl', 'approved', 'users', uid);
+    await window._fbSetDoc(approvedRef, { uid, email, name, photo, approvedAt: new Date().toISOString() });
+    // Remove from pending
+    const pendingRef = window._fbDoc(window._fbDB, 'accessControl', 'pending', 'requests', uid);
+    await window._fbDeleteDoc(pendingRef);
+    toast('✅ ' + name + ' approved!');
+    loadAdminData();
+  } catch(e) { toast('⚠️ Error: ' + e.message); }
+}
+
+async function rejectUser(uid, email) {
+  if (!confirm('Reject ' + email + '?')) return;
+  if (!window._fbReady) return;
+  try {
+    const pendingRef = window._fbDoc(window._fbDB, 'accessControl', 'pending', 'requests', uid);
+    await window._fbDeleteDoc(pendingRef);
+    toast('❌ Request rejected');
+    loadAdminData();
+  } catch(e) { toast('⚠️ Error: ' + e.message); }
+}
+
+async function revokeUser(uid, email) {
+  if (!confirm('Revoke access for ' + email + '?')) return;
+  if (!window._fbReady) return;
+  try {
+    const approvedRef = window._fbDoc(window._fbDB, 'accessControl', 'approved', 'users', uid);
+    await window._fbDeleteDoc(approvedRef);
+    toast('✅ Access revoked');
+    loadAdminData();
+  } catch(e) { toast('⚠️ Error: ' + e.message); }
+}
+
+// ============================================================
+// PWA SETUP
+// ============================================================
+(function setupPWA() {
+  // Create manifest dynamically
+  const manifest = {
+    name: "जनगणना 2027 - HLO App",
+    short_name: "HLO Census",
+    description: "HLO Data Collection App for Census 2027",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#2c3e9e",
+    theme_color: "#2c3e9e",
+    orientation: "portrait",
+    icons: [
+      { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232c3e9e'/><text y='.9em' font-size='80' x='10'>🇮🇳</text></svg>", sizes: "192x192", type: "image/svg+xml" },
+      { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232c3e9e'/><text y='.9em' font-size='80' x='10'>🇮🇳</text></svg>", sizes: "512x512", type: "image/svg+xml" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  document.getElementById('pwaManifest').href = url;
+
+  // Register service worker for offline support
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'hlo-census-v1';
+      const ASSETS = ['/'];
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(()=>{}));
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', e => {
+        e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+        self.clients.claim();
+      });
+      self.addEventListener('fetch', e => {
+        if(e.request.method !== 'GET') return;
+        e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+      });
+    `;
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+
+  // Install prompt banner
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show install button if not already installed
+    setTimeout(() => {
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        showInstallToast(deferredPrompt);
+      }
+    }, 3000);
+  });
+})();
+
+function showInstallToast(prompt) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a237e;color:white;padding:12px 18px;border-radius:14px;font-size:12px;z-index:400;display:flex;align-items:center;gap:10px;max-width:300px;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+  div.innerHTML = '<span>📲 App install करें — offline भी चलेगा!</span><button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;">✕</button>';
+  div.addEventListener('click', async (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    div.remove();
+    if (prompt) { prompt.prompt(); }
+  });
+  document.body.appendChild(div);
+  setTimeout(() => { if (div.parentElement) div.remove(); }, 8000);
+}
 </script>
 </body>
 </html>
