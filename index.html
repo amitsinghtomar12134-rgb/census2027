@@ -17,12 +17,12 @@
   import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDI9W9gEzOsMdjSKMwVTNm-T6c8vQXeg-g",
+    authDomain: "census27-94315.firebaseapp.com",
+    projectId: "census27-94315",
+    storageBucket: "census27-94315.firebasestorage.app",
+    messagingSenderId: "26629962101",
+    appId: "1:26629962101:web:7e1186a95cbc34d8b0fb3c"
   };
   try {
     const app = initializeApp(firebaseConfig);
@@ -766,7 +766,7 @@ canvas#sigCanvas {
     <div class="admin-section" style="background:#fff8e1;">
       <h3 style="color:#e65100;">ℹ️ Admin Info</h3>
       <p style="font-size:12px;color:#555;line-height:1.7;">
-        Admin Email: <strong>amitsinghtomar12134@gmail.com</strong><br>
+        Admin Emails: <strong>amitsinghtomar12134@gmail.com</strong> &amp; <strong>amitsinghtomar1109@gmail.com</strong><br>
         Admin का data अलग Firestore path में store होता है।<br>
         हर user का data path: <code>users/{uid}/census2027</code>
       </p>
@@ -3431,7 +3431,8 @@ function appInit() {
 // ============================================================
 // AUTH SYSTEM
 // ============================================================
-const ADMIN_EMAIL = 'amitsinghtomar12134@gmail.com';
+const ADMIN_EMAILS = ['amitsinghtomar12134@gmail.com', 'amitsinghtomar1109@gmail.com'];
+const ADMIN_EMAIL = ADMIN_EMAILS[0]; // primary (for display)
 
 function showAuthScreen() {
   document.getElementById('authScreen').style.display = 'flex';
@@ -3468,7 +3469,7 @@ async function handleAuthUser(user) {
   const uid = user.uid;
 
   // Admin gets direct access
-  if (email === ADMIN_EMAIL) {
+  if (ADMIN_EMAILS.includes(email)) {
     grantAccess(user, true);
     return;
   }
@@ -3628,7 +3629,7 @@ async function loadAdminData() {
     approvedSnap.forEach(d => {
       const r = d.data();
       approvedCount++;
-      const isAdm = r.email === ADMIN_EMAIL;
+      const isAdm = ADMIN_EMAILS.includes(r.email);
       approvedHTML += `
         <div class="user-row">
           <div class="user-avatar">${(r.name||'U')[0].toUpperCase()}</div>
