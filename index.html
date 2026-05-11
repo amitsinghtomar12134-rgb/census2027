@@ -2770,18 +2770,61 @@ function editHH(hhId) {
   setupHHForm(hhId, null);
   showPage('pageHLOForm');
 }
+// ============================================================
+// RECALCULATE COUNTERS — delete ke baad call karo
+// Actual saved data se nextLineNo aur nextHHNo recalculate karta hai
+// Taaki delete ke baad next entry ka number skip na ho
+// ============================================================
+function recalculateCounters() {
+  let maxLineNo = 0;
+  let maxHHNo = 0;
+  let maxCHNo = 0;
+  (appData.buildings||[]).forEach(b => {
+    (b.census_houses||[]).forEach(ch => {
+      // CH number
+      let chNum = parseInt(ch.ch_no);
+      if(!isNaN(chNum) && chNum > maxCHNo) maxCHNo = chNum;
+      // HH level
+      (ch.households||[]).forEach(hh => {
+        // Line number
+        let ln = parseInt(hh.line_no);
+        if(!isNaN(ln) && ln > maxLineNo) maxLineNo = ln;
+        // HH (family) number — skip institutional 999
+        let fn = parseInt(hh.family_no);
+        if(!isNaN(fn) && fn !== 999 && fn > maxHHNo) maxHHNo = fn;
+      });
+    });
+  });
+  // Next = max existing + 1 (ya 1 agar koi record nahi)
+  appData.nextLineNo = maxLineNo > 0 ? maxLineNo + 1 : 1;
+  appData.nextHHNo  = maxHHNo  > 0 ? maxHHNo  + 1 : 1;
+  appData.nextCHNo  = maxCHNo  > 0 ? maxCHNo  + 1 : 1;
+}
+
 function deleteHH(hhId) {
   if(!confirm('यह household मिटाएं?')) return;
   for(let b of (appData.buildings||[])) for(let ch of (b.census_houses||[])) {
     let idx = ch.households.findIndex(x=>x.id===hhId);
-    if(idx!==-1) { ch.households.splice(idx,1); save(); toast('Household deleted'); return; }
+    if(idx!==-1) {
+      ch.households.splice(idx,1);
+      recalculateCounters(); // ✅ counters fix karo
+      save();
+      toast('Household deleted');
+      return;
+    }
   }
 }
 function deleteCH(chId) {
   if(!confirm('यह Census House और सभी HH मिटाएं?')) return;
   for(let b of (appData.buildings||[])) {
     let idx = b.census_houses.findIndex(x=>x.id===chId);
-    if(idx!==-1) { b.census_houses.splice(idx,1); save(); toast('Census House deleted'); return; }
+    if(idx!==-1) {
+      b.census_houses.splice(idx,1);
+      recalculateCounters(); // ✅ counters fix karo
+      save();
+      toast('Census House deleted');
+      return;
+    }
   }
 }
 
