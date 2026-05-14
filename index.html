@@ -3348,8 +3348,11 @@ function exportExcel() {
     let sortedCHs = [...(building.census_houses||[])].sort((a,b)=>parseInt(a.ch_no)-parseInt(b.ch_no));
     sortedCHs.forEach(ch => {
       let chStatus = ch.locked ? 'LOCKED' : (ch.q7==='0' ? 'VACANT' : (ch.institutional ? 'INSTITUTIONAL' : 'NORMAL'));
-      if(ch.locked || (ch.q7==='0' && !(ch.households||[]).length)) {
-        // Locked/Vacant CH with no HH — still show one row
+      // Non-residential use codes: 3=Shop/Office,4=School,5=Hotel,6=Hospital,7=Factory,8=Worship,9=Non-residential
+      let nonResidentialCodes = ['3','4','5','6','7','8','9'];
+      let isNonResidential = nonResidentialCodes.includes(String(ch.q7));
+      if(ch.locked || (ch.q7==='0' && !(ch.households||[]).length) || (isNonResidential && !(ch.households||[]).length)) {
+        // Locked / Vacant / Non-residential CH with no HH — still show one row
         rows.push([
           building.building_no, ch.ch_no, '—', '—', chStatus,
           lbl(q4L,ch.q4), lbl(q5L,ch.q5), lbl(q6L,ch.q6), lbl(q7L,ch.q7), ch.actual_use_desc||'—', lbl(q8L,ch.q8),
